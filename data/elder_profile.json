@@ -1,0 +1,26 @@
+{
+  "elder_id": "elder_001",
+  "meta": {
+    "created_at": "2026-07-01T10:00:00+08:00",
+    "last_updated": "2026-07-20T12:00:00+08:00"
+  },
+  "personal_info": {
+    "name": "阿香婆婆",
+    "nickname": "阿香",
+    "gender": "female",
+    "age": 75,
+    "birth_year": 1951,
+    "location": "宜蘭縣"
+  },
+  "localization_settings": {
+    "primary_language": "客家語",
+    "secondary_language": "台灣閩南語",
+    "tts_accent": "台灣國語腔調",
+    "persona_relation": "貼心孝順的晚輩"
+  },
+  "care_baseline": {
+    "chronic_diseases": ["高血壓", "糖尿病"],
+    "emergency_contact": "LINE_BOT_GROUP_01",
+    "core_emotional_need": "子女在竹科工作較少返鄉，容易感到孤單，需加強主動關懷。"
+  }
+}

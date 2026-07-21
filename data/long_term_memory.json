@@ -1,0 +1,30 @@
+{
+  "elder_id": "elder_001",
+  "meta": {
+    "last_analyzed_at": "2026-07-21T13:41:15.609843"
+  },
+  "extracted_preferences": {
+    "likes": [
+      "香菜",
+      "燙青菜",
+      "聊種菜的心情",
+      "null",
+      "好餓",
+      "今年吃什麼",
+      "每三餐"
+    ],
+    "dislikes": [
+      "太複雜的介面",
+      "被敷衍的回應"
+    ]
+  },
+  "historical_habits": {
+    "morning_routine": "05:30 左右固定在三合院前慢走活動筋骨",
+    "afternoon_routine": "08:00 之後常去菜園拔草整理"
+  },
+  "medication_tracker": {
+    "prescription_name": "降血壓藥 (脈優)",
+    "requirement": "每日一錠，建議 08:00 前服用",
+    "compliance_rate_this_week": 0.8500000000000001
+  }
+}

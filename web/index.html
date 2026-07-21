@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>阿香婆婆關懷系統</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* 登入頁背景 */
+    .netflix-bg {
+      background-color: hsl(0, 0%, 100%);
+    }
+    @keyframes pulse-green {
+      0%  { box-shadow: 0 0 0 0px rgba(16,185,129,.6); }
+      70% { box-shadow: 0 0 0 40px rgba(16,185,129,0); }
+      100%{ box-shadow: 0 0 0 0px rgba(16,185,129,0); }
+    }
+    @keyframes pulse-red {
+      0%  { box-shadow: 0 0 0 0px rgba(239,68,68,.7); }
+      70% { box-shadow: 0 0 0 50px rgba(239,68,68,0); }
+      100%{ box-shadow: 0 0 0 0px rgba(239,68,68,0); }
+    }
+    @keyframes pulse-blue {
+      0%  { box-shadow: 0 0 0 0px rgba(14,165,233,.6); }
+      70% { box-shadow: 0 0 0 40px rgba(14,165,233,0); }
+      100%{ box-shadow: 0 0 0 0px rgba(14,165,233,0); }
+    }
+    @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    .spin { animation: spin 1s linear infinite; display:inline-block; }
+    .fade-up { animation: fadeUp .4s ease-out forwards; }
+  </style>
+</head>
+<body class="bg-slate-50 select-none m-0 p-0">
+
+<!-- ══════════════════════════════════════════
+     1. 角色登入畫面 (預設顯示)
+══════════════════════════════════════════ -->
+<div id="loginScreen" class="fixed inset-0 netflix-bg z-50 overflow-y-auto py-10 flex flex-col items-center transition-opacity duration-500">
+  <div class="text-center max-w-4xl px-4">
+    <!-- 頂部系統 LOGO -->
+    <div class="flex justify-center mb-10">
+      <!-- 學校 Logo 圖片 -->
+      <img src="images/school_logo.png" 
+           alt="學校 Logo" 
+           class="h-16 sm:h-20 object-contain drop-shadow-sm"
+           onerror="this.style.display='none'; document.getElementById('schoolTextLogo').classList.remove('hidden');">
+      
+      <!-- 備用文字 Logo（萬一圖片路徑錯了或加載失敗，會自動顯示這個文字，避免畫面空掉） -->
+      <div id="schoolTextLogo" class="hidden text-slate-800 font-bold text-2xl tracking-wider">
+        🏫 智慧長照關懷學校
+      </div>
+    </div>
+
+    <h1 class="text-[#000000] text-3xl sm:text-4xl font-bold tracking-wide mb-10">誰要聊天？</h1>
+    
+    <!-- 3 位使用者網格 -->
+    <div class="flex flex-wrap justify-center gap-6 sm:gap-8">
+      
+      <!-- 使用者 1: 阿香婆婆 -->
+      <div onclick="selectUser('elder_001', '阿香婆婆', 'images/user1.jpg', '👵')" class="group flex flex-col items-center gap-3 cursor-pointer">
+        <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-lg overflow-hidden border-4 border-transparent group-hover:border-fuchsia-400 transition-all duration-200">
+          <!-- ⚠️ 可替換為您自己的照片 src="images/user1.jpg" -->
+          <img src="images/user1.jpg" 
+               onerror="this.src='https://api.dicebear.com/7.x/adventurer/svg?seed=Granny'"
+               alt="阿香婆婆" class="w-full h-full object-cover">
+        </div>
+        <span class="text-slate-400 text-sm sm:text-base group-hover:text-fuchsia-400 transition-colors duration-200">阿香婆婆</span>
+      </div>
+
+      <!-- 使用者 2: 勇伯 -->
+      <div onclick="selectUser('elder_002', '勇伯', 'images/user2.jpg', '👴')" class="group flex flex-col items-center gap-3 cursor-pointer">
+        <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-lg overflow-hidden border-4 border-transparent group-hover:border-sky-400 transition-all duration-200">
+          <!-- ⚠️ 可替換為您自己的照片 src="images/user2.jpg" -->
+          <img src="images/user2.jpg" 
+               onerror="this.src='https://api.dicebear.com/7.x/adventurer/svg?seed=Grandpa'"
+               alt="勇伯" class="w-full h-full object-cover">
+        </div>
+        <span class="text-slate-400 text-sm sm:text-base group-hover:text-sky-400 transition-colors duration-200">勇伯</span>
+      </div>
+
+      <!-- 使用者 3: 秀琴媽媽 -->
+      <div onclick="selectUser('elder_003', '秀琴媽媽', 'images/user3.jpg', '👩‍🦳')" class="group flex flex-col items-center gap-3 cursor-pointer">
+        <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-lg overflow-hidden border-4 border-transparent group-hover:border-emerald-400 transition-all duration-200">
+          <!-- ⚠️ 可替換為您自己的照片 src="images/user3.jpg" -->
+          <img src="images/user3.jpg" 
+               onerror="this.src='https://api.dicebear.com/7.x/adventurer/svg?seed=Auntie'"
+               alt="秀琴媽媽" class="w-full h-full object-cover">
+        </div>
+        <span class="text-slate-400 text-sm sm:text-base group-hover:text-emerald-400 transition-colors duration-200">秀琴媽媽</span>
+      </div>
+
+    </div>
+    <!-- AI 警語同意書 -->
+    <div class="mt-12 max-w-lg mx-auto bg-slate-50 p-5 rounded-lg border border-slate-200 text-left">
+      <div class="flex items-start gap-3">
+        <!-- 核取方塊 -->
+        <input type="checkbox" id="agreeCheckbox" class="mt-1.5 w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500">
+        
+        <!-- 警語詳細內容（每行換行，標題粗體） -->
+        <label for="agreeCheckbox" class="text-xs text-slate-600 leading-relaxed cursor-pointer flex flex-col gap-2">
+          <strong class="text-slate-800 text-sm">【系統使用須知與隱私保護宣告】</strong>
+          
+          <div>
+            <strong class="text-slate-700">1. 非醫療診斷：</strong>本陪伴系統所提供之對話內容與健康生活摘要，僅供生活陪伴與日常健康參考，不具備醫療診斷或治療建議之功效。如有任何身體不適，請務必諮詢專業醫療人員。
+          </div>
+          
+          <div>
+            <strong class="text-slate-700">2. 隱私與個資保護：</strong>本系統重視隱私。您的語音與對話記錄將採用加密技術傳輸及儲存，且本系統不蒐集身分證字號、病歷號等敏感性個人資料。
+          </div>
+          
+          <div>
+            <strong class="text-slate-700">3. AI 限制宣告：</strong>本系統採用生成式 AI 技術，對話與摘要內容可能包含由 AI 生成之非絕對精確之資訊（幻覺），實際狀況請以照護人員與家屬之親自確認為準。
+          </div>
+          
+          <div class="mt-1 text-emerald-600 font-semibold text-[11px] flex items-center gap-1">
+            <span>💡 閱讀完畢請勾選左側方框，即可點選上方角色開始聊天。</span>
+          </div>
+        </label>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     2. 語音對話主畫面 (預設先隱藏 class="hidden")
+══════════════════════════════════════════ -->
+<div id="mainApp" class="hidden flex flex-col items-center justify-center min-h-screen px-4 py-10 relative">
+  <!-- 登出 / 切換使用者按鈕 (右上角) -->
+  <div class="absolute top-4 right-4 flex items-center gap-2">
+    <a href="dashboard.html" target="_blank" class="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold transition">
+      📊 照護看板
+    </a>
+    <button onclick="logout()" class="px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-600 text-xs font-bold transition">
+      🔄 切換使用者
+    </button>
+  </div>
+
+  <!-- 標題與動態頭像 -->
+  <div class="text-center mb-8">
+    <div class="relative w-20 h-20 mx-auto mb-3">
+      <!-- 圓形大頭像（登入後會自動更新為對應長輩的照片） -->
+      <img id="mainAvatar" src="" class="w-full h-full rounded-full object-cover border-4 border-white shadow-md">
+      <!-- 備用 Emoji，當照片加載失敗時顯示 -->
+      <span id="mainEmoji" class="absolute inset-0 flex items-center justify-center text-5xl bg-slate-100 rounded-full hidden">👵</span>
+    </div>
+    <!-- 標題名稱（登入後會自動更新） -->
+    <h1 id="mainTitle" class="text-2xl sm:text-3xl font-extrabold text-slate-800">載入中...</h1>
+    <p id="status" class="text-slate-500 mt-2 text-base sm:text-lg font-medium">正在初始化麥克風...</p>
+  </div>
+
+  <!-- 大圓形按鈕 -->
+  <button id="btn" onclick="onBtnClick()"
+    style="width:240px;height:240px;border-radius:50%;background:#10b981;
+           display:flex;flex-direction:column;align-items:center;justify-content:center;
+           border:none;cursor:pointer;transition:background .3s;">
+    <span id="btnIcon" style="font-size:4rem;margin-bottom:.5rem">🎙️</span>
+    <span id="btnLabel" style="font-size:1.4rem;font-weight:900;color:white;letter-spacing:.15em">初始化中</span>
+  </button>
+
+  <!-- 回應對話框 -->
+  <div id="replyBox"
+    style="display:none;margin-top:2rem;width:100%;max-width:420px;
+           background:white;border-radius:1.25rem;padding:1.25rem 1.5rem;
+           box-shadow:0 4px 24px rgba(0,0,0,.08);border:1px solid #e2e8f0;">
+    <p style="font-size:.75rem;color:#94a3b8;margin-bottom:.5rem;font-weight:600;">💬 系統回應</p>
+    <p id="replyText" style="font-size:1.2rem;color:#1e293b;line-height:1.7;font-weight:500;"></p>
+  </div>
+
+  <!-- 頁腳 -->
+  <p class="mt-10 text-xs text-slate-400">⚠️ 警語：本系統僅供生活陪伴與健康資訊參考，非提供醫療診斷，不得作為醫療診斷、治療建議或取代專業醫療人員判斷。</p>
+  <!-- 🌟 【新增】左上角學校 Logo 區塊 🌟 -->
+  <div class="absolute top-4 left-4 flex items-center gap-2 pointer-events-none opacity-80 sm:opacity-90">
+    <!-- 學校 Logo 圖片 -->
+    <img src="images/school_logo.png" 
+         alt="學校 Logo" 
+         class="h-8 sm:h-12 object-contain"
+         onerror="this.style.display='none'; document.getElementById('schoolSubText').classList.remove('hidden');">
+    
+    <!-- 備用小文字（萬一圖片載入失敗時顯示） -->
+    <span id="schoolSubText" class="hidden text-xs text-slate-400 font-semibold">
+      🏫 合作學校
+    </span>
+  </div>
+</div>
+
+<script>
+// ═══════════════════ 角色登入切換邏輯 ═══════════════════
+let currentUserId = "";
+
+function selectUser(id, name, imgUrl, defaultEmoji) {
+
+  // 💡 檢查是否有勾選 AI 警語同意書（若未勾選則跳出提示，並中斷登入）
+  const agreeCheckbox = document.getElementById('agreeCheckbox');
+  if (agreeCheckbox && !agreeCheckbox.checked) {
+    alert('請先閱讀並勾選下方的【系統使用須知與隱私保護宣告】，即可開始使用喔！');
+    return; // 直接中斷執行，不進入主畫面
+  }
+
+  currentUserId = id;
+  
+  // 1. 將選取的長輩 ID 存入瀏覽器快取 (讓 Dashboard 後台也能讀取當前是誰)
+  localStorage.setItem('active_elder_id', id);
+  
+  // 2. 動態更新對話主畫面的「名稱」與「頭像」
+  document.getElementById('mainTitle').textContent = `${name}，今天好嗎？`;
+  
+  const mainImg = document.getElementById('mainAvatar');
+  const mainEmoji = document.getElementById('mainEmoji');
+  
+  mainImg.src = imgUrl;
+  mainImg.onload = () => {
+    mainImg.classList.remove('hidden');
+    mainEmoji.classList.add('hidden');
+  };
+  mainImg.onerror = () => {
+    // 萬一圖片載入失敗，顯示 Emoji 備份
+    mainImg.classList.add('hidden');
+    mainEmoji.textContent = defaultEmoji;
+    mainEmoji.classList.remove('hidden');
+  };
+
+  // 3. 執行淡出效果
+  const login = document.getElementById('loginScreen');
+  login.style.opacity = '0';
+  setTimeout(() => {
+    login.classList.add('hidden');
+    
+    // 4. 顯示語音對話主畫面，並播放淡入動畫
+    const app = document.getElementById('mainApp');
+    app.classList.remove('hidden');
+    app.classList.add('fade-up');
+    
+    // 5. 💡 【關鍵安全修改】只有等長輩登入後，才真正啟動麥克風監聽！
+    initWakeWordDetection();
+  }, 500);
+}
+
+function logout() {
+  // 1. 停止所有當前錄音與語音播放
+  stopAll();
+  
+  // 💡 【新增】重置並隱藏前一位使用者的對話框
+  const replyBox = document.getElementById('replyBox');
+  const replyText = document.getElementById('replyText');
+  if (replyBox) replyBox.style.display = 'none'; // 隱藏對話框
+  if (replyText) replyText.textContent = '';     // 清空文字內容
+  
+  // 隱藏對話主畫面，重置並顯示登入畫面
+  document.getElementById('mainApp').classList.add('hidden');
+  const login = document.getElementById('loginScreen');
+  login.classList.remove('hidden');
+  void login.offsetWidth; // 強制重繪以順利套用動畫
+  login.style.opacity = '1';
+}
+
+// ═══════════════════ VAD 參數設定 ═══════════════════
+const THRESHOLD  = 25;    // 音量門檻，防環境雜音
+const SILENCE_MS = 1200;  // 靜音幾毫秒後送出
+const MIN_MS     = 300;   // 最短有效錄音時間
+const MAX_REC_MS = 8000;  // 單次最長錄音（超時強制送出）
+
+// ═══════════════════ 系統狀態 ═══════════════════
+let STATE = 'idle';
+let stream, audioCtx, analyser, scriptProcessor;
+let leftchannel = [], recordingLength = 0;
+let silenceTimer = null, startTime = 0, rafId = null;
+let maxRecTimeout = null;
+let ttsAudio = null;
+let sampleRate = 16000;
+let recognition = null;
+let isSessionActive = false;
+
+const btn      = document.getElementById('btn');
+const btnIcon  = document.getElementById('btnIcon');
+const btnLabel = document.getElementById('btnLabel');
+const status   = document.getElementById('status');
+const replyBox = document.getElementById('replyBox');
+const replyText= document.getElementById('replyText');
+
+// ═══════════════════ UI 更新 ═══════════════════
+function setUI(s) {
+  STATE = s;
+  const styles = {
+    idle:         { bg:'#10b981', anim:'pulse-green 2.5s ease-out infinite', icon:'🎙️', label:'點我開始',  msg:'' },
+    waiting_wake: { bg:'#64748b', anim:'pulse-green 2.5s ease-out infinite', icon:'😴', label:'守護中',    msg:'請說「小黃小黃」喚醒' },
+    //waiting_wake: { bg:'#64748b', anim:'pulse-green 2.5s ease-out infinite', icon:'😴', label:'守護中',    msg:'請說「小黃小黃」喚醒，或點按鈕開始' },
+    listening:    { bg:'#0ea5e9', anim:'pulse-blue 1.5s ease-out infinite',  icon:'👂', label:'在聆聽…',  msg:'👂 請說話，我在聽…' },
+    recording:    { bg:'#ef4444', anim:'pulse-red .8s ease-out infinite',    icon:'⏺',  label:'說話中…',  msg:'🔴 正在錄音，請繼續說…' },
+    processing:   { bg:'#f59e0b', anim:'none',                               icon:'⏳', label:'思考中…',  msg:'⏳ AI 分析中，請稍候…' },
+    speaking:     { bg:'#8b5cf6', anim:'pulse-blue 2s ease-out infinite',    icon:'🔊', label:'回覆中…',  msg:'💬 回覆中，可直接說話打斷' },
+  };
+  const c = styles[s];
+  btn.style.background = c.bg;
+  btn.style.animation  = c.anim;
+  btnIcon.textContent  = c.icon;
+  btnLabel.textContent = c.label;
+  status.textContent   = c.msg;
+}
+
+// ═══════════════════ 按鈕點擊 ═══════════════════
+function onBtnClick() {
+  if (STATE === 'waiting_wake' || STATE === 'idle') {
+    isSessionActive = true;
+    startListening();
+  } else {
+    stopAll();
+  }
+}
+
+// ═══════════════════ 喚醒詞監聽 ═══════════════════
+function initWakeWordDetection() {
+  if (isSessionActive) { startListening(); return; }
+
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    isSessionActive = true;
+    startListening();
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'zh-TW';
+
+  recognition.onstart = () => setUI('waiting_wake');
+
+  recognition.onresult = (event) => {
+    if (isSessionActive) return;
+    let text = '';
+    for (let i = event.resultIndex; i < event.results.length; ++i)
+      text += event.results[i][0].transcript;
+    if (text.includes('小黃')) {
+      isSessionActive = true;
+      recognition.stop();
+    }
+  };
+
+  recognition.onend = () => {
+    if (!isSessionActive && STATE === 'waiting_wake') recognition.start();
+    else if (isSessionActive) startListening();
+  };
+
+  recognition.onerror = () => {};
+  recognition.start();
+}
+
+// ═══════════════════ 開始錄音 ═══════════════════
+async function startListening() {
+  try {
+    leftchannel = [];
+    recordingLength = 0;
+    _liveSpeechResult = ''; // 清空即時辨識結果
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContextClass({ sampleRate: 16000 });
+    sampleRate = audioCtx.sampleRate;
+
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    scriptProcessor = audioCtx.createScriptProcessor(2048, 1, 1);
+
+    const source = audioCtx.createMediaStreamSource(stream);
+    source.connect(analyser);
+    analyser.connect(scriptProcessor);
+    scriptProcessor.connect(audioCtx.destination);
+
+    scriptProcessor.onaudioprocess = function(e) {
+      if (STATE !== 'recording' && STATE !== 'listening') return;
+      const samples = e.inputBuffer.getChannelData(0);
+      leftchannel.push(new Float32Array(samples));
+      recordingLength += samples.length;
+    };
+
+    startTime = Date.now();
+    setUI('listening');
+
+    // 🎯 同步啟動瀏覽器端即時語音辨識
+    startLiveSpeechRecognition();
+
+    clearTimeout(maxRecTimeout);
+    maxRecTimeout = setTimeout(() => {
+      if (STATE === 'recording' || STATE === 'listening') sendAudio();
+    }, MAX_REC_MS);
+
+    rafId = requestAnimationFrame(vadLoop);
+  } catch(e) {
+    status.textContent = '⚠️ 無法開啟麥克風，請確認權限';
+  }
+}
+
+// ═══════════════════ VAD 循環 ═══════════════════
+function vadLoop() {
+  if (STATE === 'processing' || STATE === 'waiting_wake' || STATE === 'idle') return;
+
+  const buf = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(buf);
+  const vol = buf.reduce((a,b)=>a+b,0) / buf.length;
+
+  if (STATE === 'speaking') { rafId = requestAnimationFrame(vadLoop); return; }
+
+  if (vol > THRESHOLD) {
+    if (STATE === 'listening') setUI('recording');
+    clearTimeout(silenceTimer);
+    silenceTimer = null;
+  } else {
+    if (STATE === 'recording' && !silenceTimer)
+      silenceTimer = setTimeout(sendAudio, SILENCE_MS);
+  }
+  rafId = requestAnimationFrame(vadLoop);
+}
+
+// ═══════════════════ 停止送出 ═══════════════════
+function sendAudio() {
+  clearTimeout(maxRecTimeout);
+  clearTimeout(silenceTimer);
+  cancelAnimationFrame(rafId);
+
+  if (Date.now() - startTime < MIN_MS) {
+    leftchannel = []; recordingLength = 0;
+    setUI('listening');
+    rafId = requestAnimationFrame(vadLoop);
+    return;
+  }
+
+  // 直接呼叫 onStop，資源清理在裡面做
+  onStop();
+}
+
+// ═══════════════════ WAV 編碼工具 ═══════════════════
+function mergeBuffers(ch, len) {
+  const result = new Float32Array(len);
+  let offset = 0;
+  ch.forEach(b => { result.set(b, offset); offset += b.length; });
+  return result;
+}
+function writeUTF(view, off, str) {
+  for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i));
+}
+function encodeWAV(samples) {
+  const buf = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buf);
+  writeUTF(view, 0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeUTF(view, 8, 'WAVE'); writeUTF(view, 12, 'fmt ');
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+  writeUTF(view, 36, 'data'); view.setUint32(40, samples.length * 2, true);
+  let idx = 44;
+  for (let i = 0; i < samples.length; i++, idx += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(idx, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+  return view;
+}
+
+// ═══════════════════ 送出後端（SSE 串流模式）═══════════════════
+// 音訊播放佇列
+let audioQueue = [];
+let isPlayingQueue = false;
+
+async function onStop() {
+  setUI('processing');
+
+  // 📡 通知 Dashboard
+  try {
+    localStorage.setItem('elder_interaction_event', JSON.stringify({
+      time: new Date().toISOString(),
+      elder_id: currentUserId,
+      state: 'processing'
+    }));
+  } catch(e) {}
+
+  // 停止錄音相關資源
+  clearTimeout(maxRecTimeout);
+  clearTimeout(silenceTimer);
+  cancelAnimationFrame(rafId);
+  if (scriptProcessor) { scriptProcessor.onaudioprocess = null; scriptProcessor.disconnect(); }
+  if (stream) stream.getTracks().forEach(t => t.stop());
+
+  // 取得即時 ASR 結果
+  const userText = stopLiveSpeechRecognition();
+  leftchannel = []; recordingLength = 0;
+
+  if (!userText) {
+    // 瀏覽器 ASR 沒抓到文字
+    showReply('⚠️ 沒有聽清楚，請再說一次');
+    afterSpeak();
+    return;
+  }
+
+  showReply(`🗣️ ${userText}`);
+
+  // 直接送文字給後端（跳過 86 秒的後端 ASR）
+  try {
+    await streamChat(userText);
+  } catch(err) {
+    clearThinking();
+    const fallback = '對不起，系統忙碌中，請再試一次';
+    showReply(fallback);
+    speak(null, fallback);
+  }
+}
+
+// ═══════ 瀏覽器端即時 ASR（錄音時同步辨識）═══════
+let _liveSpeechResult = '';
+let _liveSpeechRecognizer = null;
+
+function startLiveSpeechRecognition() {
+  _liveSpeechResult = '';
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  _liveSpeechRecognizer = new SpeechRecognition();
+  _liveSpeechRecognizer.lang = 'zh-TW';
+  _liveSpeechRecognizer.continuous = true;
+  _liveSpeechRecognizer.interimResults = true;
+
+  _liveSpeechRecognizer.onresult = (event) => {
+    let text = '';
+    for (let i = 0; i < event.results.length; i++) {
+      text += event.results[i][0].transcript;
+    }
+    _liveSpeechResult = text;
+  };
+
+  _liveSpeechRecognizer.onerror = () => {};
+  _liveSpeechRecognizer.onend = () => {};
+
+  try { _liveSpeechRecognizer.start(); } catch(e) {}
+}
+
+function stopLiveSpeechRecognition() {
+  if (_liveSpeechRecognizer) {
+    try { _liveSpeechRecognizer.stop(); } catch(e) {}
+    _liveSpeechRecognizer = null;
+  }
+  return _liveSpeechResult.trim() || null;
+}
+
+// ═══════ 串流對話（只送文字給後端）═══════
+async function streamChat(userText) {
+  showThinking();
+  audioQueue = [];
+  isPlayingQueue = false;
+  _displayedReply = ''; // 重置累積文字
+  setUI('speaking');
+
+  const res = await fetch(`/api/chat/stream?elder_id=${currentUserId}&text=${encodeURIComponent(userText)}`, { method: 'POST' });
+  if (!res.ok) throw new Error('後端異常');
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let sseBuffer = '';
+  let fullReply = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    sseBuffer += decoder.decode(value, { stream: true });
+    const events = sseBuffer.split('\n\n');
+    sseBuffer = events.pop();
+
+    for (const eventStr of events) {
+      const dataLine = eventStr.split('\n').find(l => l.startsWith('data: '));
+      if (!dataLine) continue;
+
+      try {
+        const data = JSON.parse(dataLine.slice(6));
+
+        if (data.type === 'thinking') {
+          // 只在還沒收到任何句子時才顯示 thinking
+          if (fullReply === '') showThinking();
+        }
+        else if (data.type === 'sentence') {
+          fullReply += data.text;
+          // 將句子（文字+音訊）加入佇列，由播放器負責同步顯示
+          audioQueue.push({ text: data.text, audioUrl: data.audioUrl || null });
+          if (!isPlayingQueue) playNextInQueue();
+        }
+        else if (data.type === 'done') {
+          fullReply = data.full_reply || fullReply;
+
+          try {
+            localStorage.setItem('elder_interaction_event', JSON.stringify({
+              time: new Date().toISOString(),
+              elder_id: currentUserId,
+              user_text: userText,
+              ai_reply: fullReply,
+              state: 'completed'
+            }));
+          } catch(e) {}
+
+          if (['再見','拜拜','不需要了'].some(w => fullReply.includes(w))) {
+            isSessionActive = false;
+          }
+        }
+      } catch(e) {}
+    }
+  }
+
+  await waitForQueueEmpty();
+  // 播放全部結束後顯示完整回覆
+  showReply(fullReply);
+  afterSpeak();
+}
+
+// ═══════════════════ 音訊佇列播放器 ═══════════════════
+let _displayedReply = ''; // 追蹤已顯示的累積文字
+
+function playNextInQueue() {
+  if (audioQueue.length === 0) {
+    isPlayingQueue = false;
+    return;
+  }
+  isPlayingQueue = true;
+
+  // 開始播放第一句時，清除「思考中」動畫
+  clearThinking();
+
+  const item = audioQueue.shift();
+
+  // 播放這句時，同步顯示對應的文字
+  _displayedReply += item.text;
+  showReply(_displayedReply);
+
+  if (item.audioUrl) {
+    ttsAudio = new Audio(item.audioUrl);
+    ttsAudio.onended = () => {
+      ttsAudio = null;
+      playNextInQueue();
+    };
+    ttsAudio.onerror = () => {
+      ttsAudio = null;
+      playNextInQueue();
+    };
+    ttsAudio.play().catch(() => {
+      ttsAudio = null;
+      playNextInQueue();
+    });
+  } else {
+    // 沒有音訊 URL，用瀏覽器 TTS 或直接跳下一句
+    if (window.speechSynthesis && item.text) {
+      const utt = new SpeechSynthesisUtterance(item.text);
+      utt.lang = 'zh-TW';
+      utt.rate = 0.95;
+      utt.onend = () => playNextInQueue();
+      utt.onerror = () => playNextInQueue();
+      speechSynthesis.speak(utt);
+    } else {
+      playNextInQueue();
+    }
+  }
+}
+
+function waitForQueueEmpty() {
+  return new Promise(resolve => {
+    const check = () => {
+      if (audioQueue.length === 0 && !isPlayingQueue) {
+        resolve();
+      } else {
+        setTimeout(check, 200);
+      }
+    };
+    check();
+  });
+}
+
+// ═══════════════════ 顯示回應 ═══════════════════
+let _isShowingThinking = false;
+
+function showReply(text) {
+  // 確保先停止 thinking 動畫
+  clearThinking();
+  replyText.textContent = text;
+  replyBox.style.display = 'block';
+}
+
+// 思考中動畫：顯示動態三點
+let _thinkingTimer = null;
+function showThinking() {
+  // 避免重複建立 timer
+  if (_thinkingTimer) return;
+  _isShowingThinking = true;
+  replyBox.style.display = 'block';
+  let dots = 0;
+  const labels = ['思考中', '思考中．', '思考中．．', '思考中．．．'];
+  replyText.textContent = labels[0];
+  _thinkingTimer = setInterval(() => {
+    dots = (dots + 1) % labels.length;
+    replyText.textContent = labels[dots];
+  }, 400);
+}
+
+function clearThinking() {
+  if (_thinkingTimer) {
+    clearInterval(_thinkingTimer);
+    _thinkingTimer = null;
+  }
+  _isShowingThinking = false;
+}
+
+// ═══════════════════ TTS ═══════════════════
+function speak(audioUrl, fallbackText) {
+  setUI('speaking');
+  rafId = requestAnimationFrame(vadLoop);
+
+  const url = audioUrl || `/api/tts?text=${encodeURIComponent(fallbackText)}`;
+  ttsAudio = new Audio(url);
+  ttsAudio.onended = afterSpeak;
+  ttsAudio.onerror = () => fallbackSpeak(fallbackText);
+  ttsAudio.play().catch(() => fallbackSpeak(fallbackText));
+}
+
+function fallbackSpeak(text) {
+  if (!window.speechSynthesis) { afterSpeak(); return; }
+  speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'zh-TW'; utt.rate = 0.95;
+  utt.onend = afterSpeak; utt.onerror = afterSpeak;
+  speechSynthesis.speak(utt);
+}
+
+// ═══════════════════ 對話結束 ═══════════════════
+function afterSpeak() {
+  cancelAnimationFrame(rafId);
+  audioCtx?.close(); audioCtx = null;
+  setUI('idle');
+  if (isSessionActive) setTimeout(startListening, 1000);
+  else setTimeout(initWakeWordDetection, 1000);
+}
+
+function stopAll() {
+  isSessionActive = false;
+  clearTimeout(maxRecTimeout);
+  if (recognition) recognition.stop();
+  
+  // 清空音訊佇列
+  audioQueue = [];
+  isPlayingQueue = false;
+  
+  // 💡 【強化】徹底停止 HTML5 Audio 的播放與釋放記憶體
+  if (ttsAudio) { 
+    ttsAudio.pause(); 
+    ttsAudio.currentTime = 0; // 將進度條歸零，確保徹底中斷
+    ttsAudio = null; 
+  }
+  
+  // 💡 【新增】強制中斷瀏覽器內建 Web Speech TTS 的發音
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel(); 
+  }
+
+  clearTimeout(silenceTimer);
+  cancelAnimationFrame(rafId);
+  if (scriptProcessor) { scriptProcessor.onaudioprocess = null; scriptProcessor.disconnect(); }
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  audioCtx?.close(); audioCtx = null;
+  leftchannel = []; recordingLength = 0;
+  setUI('idle');
+  status.textContent = '已停止';
+  setTimeout(() => { if (STATE === 'idle') status.textContent = ''; }, 2000);
+}
+
+// 💡 預設不執行初始化，等待點選使用者後才啟動！
+setUI('idle');
+</script>
+</body>
+</html>

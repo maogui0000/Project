@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>長照資料管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+    * { font-family: 'Noto Sans TC', sans-serif; }
+    body { background: #0f172a; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 1rem; }
+    .tab-btn { transition: all .2s; }
+    .tab-btn.active { background: #0ea5e9; color: white; }
+    .tab-btn:not(.active) { background: #1e293b; color: #94a3b8; }
+    input, textarea, select {
+      background: #0f172a !important;
+      border: 1px solid #334155 !important;
+      color: #e2e8f0 !important;
+      border-radius: .5rem;
+      padding: .5rem .75rem;
+      width: 100%;
+      outline: none;
+      transition: border-color .2s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: #0ea5e9 !important; }
+    label { color: #94a3b8; font-size: .75rem; font-weight: 600; display: block; margin-bottom: .25rem; }
+    .btn-primary {
+      background: linear-gradient(135deg, #0ea5e9, #6366f1);
+      color: white; font-weight: 700; border-radius: .75rem;
+      padding: .625rem 1.5rem; transition: opacity .2s; cursor: pointer;
+    }
+    .btn-primary:hover { opacity: .85; }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+    .toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 99;
+      padding: .75rem 1.25rem; border-radius: .75rem; font-size: .875rem;
+      font-weight: 600; transform: translateY(4rem); opacity: 0;
+      transition: all .3s ease;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: #052e16; border: 1px solid #16a34a; color: #4ade80; }
+    .toast.error   { background: #2d0a0a; border: 1px solid #dc2626; color: #f87171; }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100">
+
+<!-- 導覽列 -->
+<nav class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur border-b border-slate-700/60 px-4 sm:px-6 py-3">
+  <div class="max-w-3xl mx-auto flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-sm font-black">AI</div>
+      <div>
+        <div class="text-sm font-bold text-white">長照資料管理後台</div>
+        <div class="text-xs text-slate-400">Admin Panel</div>
+      </div>
+    </div>
+    <a href="dashboard.html" class="text-xs text-cyan-400 hover:text-cyan-300 transition">← 返回後台</a>
+  </div>
+</nav>
+
+<main class="max-w-3xl mx-auto px-4 py-8 space-y-6">
+
+  <!-- 長者 ID 設定 -->
+  <div class="card p-5">
+    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">① 目標長者 ID</h2>
+    <div class="flex gap-3">
+      <input id="elderId" type="text" placeholder="例如：elder_001" value="elder_001"/>
+      <button class="btn-primary whitespace-nowrap" onclick="setElderId()">設定</button>
+    </div>
+    <p class="text-xs text-slate-500 mt-2">目前：<span id="currentId" class="text-cyan-400 font-bold">elder_001</span></p>
+  </div>
+
+  <!-- 分頁按鈕 -->
+  <div class="flex gap-2 flex-wrap">
+    <button class="tab-btn active text-sm font-bold px-4 py-2 rounded-xl" onclick="switchTab('profile', this)">📋 基本資料</button>
+    <button class="tab-btn text-sm font-bold px-4 py-2 rounded-xl" onclick="switchTab('ai', this)">🤖 AI 摘要</button>
+    <button class="tab-btn text-sm font-bold px-4 py-2 rounded-xl" onclick="switchTab('timeline', this)">⏱️ 時間軸事件</button>
+  </div>
+
+  <!-- ── Tab 1：基本資料 ── -->
+  <div id="tab-profile" class="card p-5 space-y-4">
+    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">長者基本資料</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div><label>姓名</label><input id="p_name" type="text" placeholder="陳劉月香"/></div>
+      <div><label>暱稱</label><input id="p_nickname" type="text" placeholder="阿香婆婆"/></div>
+      <div><label>年齡</label><input id="p_age" type="number" placeholder="74"/></div>
+      <div><label>居住地</label><input id="p_location" type="text" placeholder="苗栗縣大湖鄉"/></div>
+      <div><label>主要語言</label><input id="p_language" type="text" placeholder="客家話（四縣腔）"/></div>
+      <div><label>慢性疾病（逗號分隔）</label><input id="p_health" type="text" placeholder="輕微高血壓,退化性膝關節炎"/></div>
+    </div>
+    <div><label>照護備註</label><textarea id="p_notes" rows="3" placeholder="長期獨居容易感到寂寞焦慮..."></textarea></div>
+    <button class="btn-primary w-full sm:w-auto" onclick="saveProfile()">💾 儲存基本資料</button>
+  </div>
+
+  <!-- ── Tab 2：AI 摘要 ── -->
+  <div id="tab-ai" class="card p-5 space-y-4 hidden">
+    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">輸入對話紀錄 → 觸發 AI 摘要分析</h2>
+    <p class="text-xs text-slate-500">將今日與長者的對話紀錄貼入下方，AI 將自動分析並寫入資料庫。</p>
+    <div><label>對話紀錄全文</label>
+      <textarea id="ai_text" rows="10" placeholder="請貼上今日對話內容&#10;&#10;例如：&#10;系統：阿香婆婆今天好嗎？&#10;婆婆：好啊，今天去菜園拔草..."></textarea>
+    </div>
+    <button class="btn-primary w-full sm:w-auto" id="aiBtn" onclick="runAiSummary()">🤖 開始 AI 分析並寫入</button>
+    <div id="ai_result" class="hidden rounded-xl bg-slate-900 border border-slate-700 p-4 text-sm text-slate-300 leading-relaxed whitespace-pre-wrap"></div>
+  </div>
+
+  <!-- ── Tab 3：時間軸事件 ── -->
+  <div id="tab-timeline" class="card p-5 space-y-4 hidden">
+    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">新增時間軸事件</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div><label>事件時間</label><input id="tl_time" type="datetime-local"/></div>
+      <div>
+        <label>事件類型</label>
+        <select id="tl_type">
+          <option value="健康警訊">健康警訊</option>
+          <option value="用藥提醒">用藥提醒</option>
+          <option value="日常活動">日常活動</option>
+          <option value="語音關懷">語音關懷</option>
+          <option value="activity">activity</option>
+          <option value="medication">medication</option>
+          <option value="interaction">interaction</option>
+        </select>
+      </div>
+      <div>
+        <label>狀態</label>
+        <select id="tl_status">
+          <option value="已處理">已處理</option>
+          <option value="待處理">待處理</option>
+          <option value="正常">正常</option>
+          <option value="異常">異常</option>
+          <option value="success">success</option>
+          <option value="warning">warning</option>
+          <option value="normal">normal</option>
+        </select>
+      </div>
+      <div><label>事件標題</label><input id="tl_title" type="text" placeholder="晚間語音關懷"/></div>
+    </div>
+    <div><label>詳細內容</label><textarea id="tl_content" rows="3" placeholder="描述事件發生的情況..."></textarea></div>
+    <button class="btn-primary w-full sm:w-auto" onclick="addTimeline()">➕ 新增事件</button>
+  </div>
+
+</main>
+
+<!-- Toast 通知 -->
+<div id="toast" class="toast"></div>
+
+<script>
+const API = '';
+let ELDER_ID = 'elder_001';
+
+// ── 工具函式 ─────────────────────────────
+function setElderId() {
+  const val = document.getElementById('elderId').value.trim();
+  if (!val) return showToast('❌ ID 不能為空', 'error');
+  ELDER_ID = val;
+  document.getElementById('currentId').textContent = val;
+  showToast(`✅ 已設定長者 ID：${val}`, 'success');
+}
+
+function switchTab(name, btn) {
+  ['profile','ai','timeline'].forEach(t => {
+    document.getElementById('tab-' + t).classList.add('hidden');
+  });
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.remove('hidden');
+  btn.classList.add('active');
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+async function apiPost(url, body) {
+  const res = await fetch(API + url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || '未知錯誤');
+  return data;
+}
+
+// ── 儲存基本資料 ─────────────────────────
+async function saveProfile() {
+  const health = document.getElementById('p_health').value
+    .split(',').map(s => s.trim()).filter(Boolean);
+  try {
+    const data = await apiPost('/api/elder/profile', {
+      elder_id:         ELDER_ID,
+      name:             document.getElementById('p_name').value,
+      nickname:         document.getElementById('p_nickname').value,
+      age:              parseInt(document.getElementById('p_age').value) || null,
+      location:         document.getElementById('p_location').value,
+      primary_language: document.getElementById('p_language').value,
+      health_status:    health,
+      care_notes:       document.getElementById('p_notes').value,
+    });
+    showToast(data.message, 'success');
+  } catch (e) {
+    showToast('❌ ' + e.message, 'error');
+  }
+}
+
+// ── AI 摘要分析 ──────────────────────────
+async function runAiSummary() {
+  const text = document.getElementById('ai_text').value.trim();
+  if (!text) return showToast('❌ 請先輸入對話紀錄', 'error');
+
+  const btn = document.getElementById('aiBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ AI 分析中，請稍候…';
+  document.getElementById('ai_result').classList.add('hidden');
+
+  try {
+    const data = await apiPost('/api/elder/ai-summary', {
+      elder_id: ELDER_ID,
+      conversation_text: text,
+    });
+    showToast(data.message, 'success');
+    const box = document.getElementById('ai_result');
+    box.textContent = JSON.stringify(data.summary, null, 2);
+    box.classList.remove('hidden');
+  } catch (e) {
+    showToast('❌ ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🤖 開始 AI 分析並寫入';
+  }
+}
+
+// ── 新增時間軸事件 ───────────────────────
+async function addTimeline() {
+  const rawTime = document.getElementById('tl_time').value;
+  if (!rawTime) return showToast('❌ 請選擇事件時間', 'error');
+  if (!document.getElementById('tl_title').value.trim())
+    return showToast('❌ 請填寫事件標題', 'error');
+
+  // datetime-local 轉成 "YYYY-MM-DD HH:MM:SS"
+  const event_time = rawTime.replace('T', ' ') + ':00';
+
+  try {
+    const data = await apiPost('/api/elder/timeline', {
+      elder_id:   ELDER_ID,
+      event_time,
+      event_type: document.getElementById('tl_type').value,
+      status:     document.getElementById('tl_status').value,
+      title:      document.getElementById('tl_title').value.trim(),
+      content:    document.getElementById('tl_content').value.trim(),
+    });
+    showToast(data.message, 'success');
+    // 清空表單
+    ['tl_time','tl_title','tl_content'].forEach(id =>
+      document.getElementById(id).value = '');
+  } catch (e) {
+    showToast('❌ ' + e.message, 'error');
+  }
+}
+
+// 預設時間為現在
+document.getElementById('tl_time').value =
+  new Date(Date.now() - new Date().getTimezoneOffset()*60000)
+    .toISOString().slice(0,16);
+</script>
+</body>
+</html>

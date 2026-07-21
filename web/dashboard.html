@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>照護者資訊後台 | 智慧長照關懷系統</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+    * { font-family: 'Noto Sans TC', sans-serif; }
+    body { background: #0f172a; }
+    /* 漸層背景卡片 */
+    .glass {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 1rem;
+    }
+    /* 滾動條美化 */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+
+    /* 時間軸線 */
+    .timeline-line {
+      position: absolute; left: 19px; top: 28px;
+      width: 2px; bottom: 0;
+      background: linear-gradient(to bottom, #3b82f6, transparent);
+    }
+    /* 進度條動畫 */
+    @keyframes fillBar { from{width:0} to{width:var(--w)} }
+    .bar-fill { animation: fillBar 1s ease-out forwards; }
+    /* 數字跳動 */
+    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .fade-up { animation: fadeUp 0.6s ease-out forwards; }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100">
+
+<!-- ══════════════════════════════════════════
+     頂部導覽列
+══════════════════════════════════════════ -->
+<nav class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur border-b border-slate-700/60 px-4 sm:px-6 py-3">
+  <div class="max-w-screen-xl mx-auto flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <!-- 學校 Logo 圖片 -->
+      <img src="images/school_logo2.jpg" 
+           alt="學校 Logo" 
+           class="h-9 w-auto object-contain drop-shadow-sm"
+           onerror="this.style.display='none'; document.getElementById('navBrandIcon').classList.remove('hidden');">
+      
+      <!-- 備用純文字/AI圖標（當圖片載入失敗時自動顯示） -->
+      <div id="navBrandIcon" class="hidden w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-sm font-black">AI</div>
+      
+      <div class="border-l border-slate-700 pl-3">
+        <div class="text-sm font-bold text-white leading-none">智慧長照關懷系統</div>
+        <div class="text-xs text-slate-400 mt-1">Module C — 照護者資訊後台</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 sm:gap-4">
+      <a href="index.html" class="text-xs px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30 transition font-bold">
+        🎙️ 語音互動
+      </a>
+      <a href="admin.html" class="text-xs px-2.5 py-1 rounded-lg bg-slate-700 border border-slate-600 text-slate-300 hover:bg-slate-600 transition font-bold">
+        ⚙️ 管理
+      </a>
+      <div class="text-xs text-slate-400 hidden sm:block" id="navDate"></div>
+      <button class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-sm">👤</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     主要內容區
+══════════════════════════════════════════ -->
+<main class="max-w-screen-xl mx-auto px-3 sm:px-6 py-5 sm:py-8">
+
+  <!-- PC: 三欄 / Mobile: 單欄 -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+
+    <!-- ══════════════════════
+         左欄：個人資料 (3/12)
+    ══════════════════════ -->
+    <div class="lg:col-span-3 flex flex-col gap-4">
+
+      <!-- 長輩基本資料卡 -->
+      <div class="card p-5">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="relative">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-3xl shadow-lg">👵</div>
+          </div>
+          <div>
+            <div class="text-lg font-black text-white" id="elderName"></div>
+            <div class="text-sm text-cyan-400 font-medium" id="elderNickname"></div>
+            
+            
+            <div class="text-xs text-slate-500 mt-0.5" id="elderId"></div>
+          </div>
+        </div>
+        <div class="space-y-2 text-xs sm:text-sm">
+          <div class="flex gap-2">
+            <span class="text-slate-400 w-16 shrink-0">🎂 年齡</span>
+            <span class="text-slate-200" id="elderAge"></span>
+          </div>
+          <div class="flex gap-2">
+            <span class="text-slate-400 w-16 shrink-0">📍 地點</span>
+            <span class="text-slate-200" id="elderLocation"></span>
+          </div>
+          <div class="flex gap-2">
+            <span class="text-slate-400 w-16 shrink-0">🗣️ 語言</span>
+            <span class="text-slate-200" id="elderLang"></span>
+          </div>
+          <div class="flex gap-2 items-start">
+            <span class="text-slate-400 w-16 shrink-0 pt-0.5">🩺 病史</span>
+            <div class="flex flex-wrap gap-1" id="elderHealth"></div>
+          </div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-slate-700 text-xs text-slate-400 leading-relaxed" id="elderNotes"></div>
+      </div>
+      
+      <!-- 💡 新增：AI 警語免責宣告卡片 -->
+      <div class="card p-4 bg-slate-800/40 border-slate-700/60">
+        <div class="flex items-center gap-1.5 text-xs font-bold text-amber-400 mb-2">
+          <span>⚠️</span> 系統使用須知與免責宣告
+        </div>
+        <div class="text-[11px] text-slate-400 leading-relaxed space-y-1.5">
+          <p><strong class="text-slate-300">1. 非醫療診斷：</strong>本系統生成之日常摘要僅供陪伴與健康參考，不具備醫療診斷功效。身體不適請務必就醫。</p>
+          <p><strong class="text-slate-300">2. 隱私保護：</strong>語音及對話採加密傳輸儲存，系統不蒐集身分證字號、病歷號等敏感個資。</p>
+          <p><strong class="text-slate-300">3. AI 限制：</strong>日常摘要基於生成式 AI 技術，內容可能包含非絕對精確之資訊（幻覺），實際狀況請以照護人員親自確認為準。</p>
+        </div>
+      </div>
+      
+    </div><!-- end 左欄 -->
+
+    <!-- ══════════════════════
+         中欄：AI 摘要 (5/12)
+    ══════════════════════ -->
+    <div class="lg:col-span-5 flex flex-col gap-4">
+
+      <!-- AI 日報摘要卡 -->
+      <div class="card p-5 bg-gradient-to-br from-slate-800 to-slate-900 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full -translate-y-8 translate-x-8"></div>
+        <div class="flex items-center gap-2 mb-3">
+          <div class="px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-bold">✨ AI 日報摘要</div>
+          <div class="text-xs text-slate-400 ml-auto" id="summaryDate"></div>
+        </div>
+        <p class="text-sm sm:text-base text-slate-200 leading-relaxed fade-up" id="overallSummary"></p>
+      </div>
+
+      <!-- 結構化日常記錄 -->
+      <div class="card p-5">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">今日日常記錄</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="structuredData"></div>
+      </div>
+
+      <!-- 本週互動統計 + 長條圖 -->
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">本週 AI 互動次數</h3>
+          <div class="text-right">
+            <span class="text-2xl font-black text-cyan-400" id="weeklyTotal"></span>
+            <span class="text-xs text-slate-400 ml-1">次 / 週</span>
+          </div>
+        </div>
+        <div class="h-40">
+          <canvas id="interactionChart"></canvas>
+        </div>
+      </div>
+
+    </div><!-- end 中欄 -->
+
+    <!-- ══════════════════════
+         右欄：時間軸 (4/12)
+    ══════════════════════ -->
+    <div class="lg:col-span-4 flex flex-col gap-4">
+
+      <!-- 今日事件時間軸 -->
+      <div class="card p-5 flex-1">
+        <div class="flex items-center gap-2 mb-4">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">今日事件時間軸</h3>
+          <span class="ml-auto text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30" id="timelineDate"></span>
+        </div>
+        <div class="relative" id="timeline"></div>
+      </div>
+
+      <!-- 狀態總覽 mini 卡 -->
+      <div class="grid grid-cols-3 gap-3" id="miniStats"></div>
+
+    </div><!-- end 右欄 -->
+
+  </div><!-- end grid -->
+</main>
+
+<!-- 頁腳 -->
+<footer class="text-center text-xs text-slate-600 py-6">
+  智慧長照關懷系統 Module C &nbsp;|&nbsp; AWS Hackathon Demo 2026
+</footer>
+
+<script>
+// ══════════════════════════════════════════
+//  後端 API 位址
+// ══════════════════════════════════════════
+const API_BASE = '';
+
+// ══════════════════════════════════════════
+//  備用假資料（API 連不上時自動使用）
+// ══════════════════════════════════════════
+const FALLBACK_DATA = {
+  "elder_id": "elder_001",
+  "personal_info": {
+    "name": "阿香婆婆",
+    "nickname": "阿香",
+    "age": 75,
+    "location": "宜蘭縣"
+  },
+  "localization_settings": {
+    "primary_language": "客家語"
+  },
+  "care_baseline": {
+    "chronic_diseases": ["高血壓", "糖尿病"],
+    "core_emotional_need": "子女在竹科工作較少返鄉，容易感到孤單。"
+  },
+  "medication_tracker": {
+    "prescription_name": "降血壓藥 (脈優)",
+    "compliance_rate_this_week": 0.95
+  },
+  "report_date": "2026-07-20",
+  "today_summary": {
+    "text": "系統等待中...",
+    "metrics": {
+      "diet": "尚未記錄",
+      "sleep": "尚未記錄",
+      "medication_taken": false,
+      "medication_time": null
+    }
+  },
+  "interaction_stats": {
+    "total_turns": 0,
+    "weekly_trend": [
+      {"day":"週一","count":0},{"day":"週二","count":0},{"day":"週三","count":0},
+      {"day":"週四","count":0},{"day":"週五","count":0},{"day":"週六","count":0},{"day":"週日","count":0}
+    ]
+  },
+  "timeline_events": []
+};
+
+// ══════════════════════════════════════════
+//  從 API 載入資料，失敗則用假資料
+// ══════════════════════════════════════════
+async function loadData() {
+  try {
+    const res = await fetch(`${API_BASE}/api/elder/elder_001`, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const raw = await res.json();
+
+    // 直接使用新格式回傳
+    return {
+      elder_id: raw.elder_id || "elder_001",
+      personal_info: raw.personal_info || FALLBACK_DATA.personal_info,
+      localization_settings: raw.localization_settings || FALLBACK_DATA.localization_settings,
+      care_baseline: raw.care_baseline || FALLBACK_DATA.care_baseline,
+      medication_tracker: raw.medication_tracker || FALLBACK_DATA.medication_tracker,
+      report_date: raw.report_date || FALLBACK_DATA.report_date,
+      today_summary: raw.today_summary || FALLBACK_DATA.today_summary,
+      interaction_stats: raw.interaction_stats || FALLBACK_DATA.interaction_stats,
+      timeline_events: raw.timeline_events || FALLBACK_DATA.timeline_events,
+    };
+  } catch (err) {
+    console.warn('⚠️ API 連線失敗，使用備用假資料：', err.message);
+    return FALLBACK_DATA;
+  }
+}
+
+// ══════════════════════════════════════════
+//  主程式初始化 (包裝在 async 內，避免外層 await 的語法錯誤)
+// ══════════════════════════════════════════
+async function init() {
+  const DATA = await loadData();
+
+  // ── 輔助函式 ──
+  function fmt(dt) {
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) {
+      return dt.substring(dt.indexOf('T') + 1, dt.lastIndexOf(':')) || dt;
+    }
+    return d.toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', hour12:false});
+  }
+  function fmtDate(str) {
+    if (!str) return '日期未知';
+    const parts = str.split(/[-/]/);
+    if (parts.length < 3) return str;
+    const [y, m, d] = parts;
+    return `${y} 年 ${m} 月 ${d} 日`;
+  }
+
+  const typeConfig = {
+    health:      { icon:'💊', color:'text-emerald-400', bg:'bg-emerald-500/10', border:'border-emerald-500/40', dot:'bg-emerald-400' },
+    interaction: { icon:'🤖', color:'text-violet-400',  bg:'bg-violet-500/10',  border:'border-violet-500/40',  dot:'bg-violet-400' },
+    activity:    { icon:'🚶', color:'text-sky-400',     bg:'bg-sky-500/10',     border:'border-sky-500/40',    dot:'bg-sky-400' },
+    alert:       { icon:'⚠️', color:'text-amber-400',  bg:'bg-amber-500/10',   border:'border-amber-500/40',  dot:'bg-amber-400' },
+    '語音關懷':   { icon:'🤖', color:'text-violet-400',  bg:'bg-violet-500/10',  border:'border-violet-500/40',  dot:'bg-violet-400' },
+    '用藥提醒':   { icon:'💊', color:'text-emerald-400', bg:'bg-emerald-500/10', border:'border-emerald-500/40', dot:'bg-emerald-400' },
+    '日常活動':   { icon:'🚶', color:'text-sky-400',     bg:'bg-sky-500/10',     border:'border-sky-500/40',    dot:'bg-sky-400' },
+    '健康警訊':   { icon:'⚠️', color:'text-amber-400',  bg:'bg-amber-500/10',   border:'border-amber-500/40',  dot:'bg-amber-400' },
+  };
+  const structuredConfig = {
+    diet:       { icon:'🍚', label:'飲食' },
+    activity:   { icon:'🏃', label:'活動' },
+    sleep:      { icon:'😴', label:'睡眠' },
+    medication: { icon:'💊', label:'用藥' },
+  };
+
+  // ── 個人資料 ──
+  const p = DATA.personal_info;
+  const care = DATA.care_baseline;
+  document.getElementById('elderName').textContent = p.name || '長輩';
+  document.getElementById('elderNickname').textContent = p.nickname || '';
+  document.getElementById('elderId').textContent = `ID: ${DATA.elder_id}`;
+  document.getElementById('elderAge').textContent = p.age ? `${p.age} 歲` : '未設定';
+  document.getElementById('elderLocation').textContent = p.location || '未設定';
+  document.getElementById('elderLang').textContent = DATA.localization_settings?.primary_language || '中文';
+  document.getElementById('elderNotes').textContent = '📝 ' + (care.core_emotional_need || '暫無備註');
+
+  // 慢性疾病標籤
+  document.getElementById('elderHealth').innerHTML = '';
+  (care.chronic_diseases || []).forEach(s => {
+    document.getElementById('elderHealth').insertAdjacentHTML('beforeend',
+      `<span class="px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs">${s}</span>`);
+  });
+
+  // ── AI 摘要 ──
+  const summary = DATA.today_summary;
+  document.getElementById('summaryDate').textContent = fmtDate(DATA.report_date);
+  document.getElementById('overallSummary').textContent = summary.text || '等待今日第一次互動...';
+
+  // ── 結構化記錄卡（從 metrics 提取）──
+  document.getElementById('structuredData').innerHTML = '';
+  const metrics = summary.metrics || {};
+  const metricMap = {
+    diet: metrics.diet,
+    sleep: metrics.sleep,
+    medication: metrics.medication_taken ? `已服藥（${metrics.medication_time || '時間未記錄'}）` : '尚未服藥',
+  };
+  Object.entries(metricMap).forEach(([key, val]) => {
+    const cfg = structuredConfig[key];
+    if (!cfg || !val) return;
+    document.getElementById('structuredData').insertAdjacentHTML('beforeend', `
+      <div class="rounded-xl bg-slate-700/50 border border-slate-600/50 p-3">
+        <div class="text-xs font-bold text-slate-400 mb-1.5">${cfg.icon} ${cfg.label}</div>
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">${val}</p>
+      </div>`);
+  });
+
+  // ── 本週互動統計 ──
+  const stats = DATA.interaction_stats;
+  document.getElementById('weeklyTotal').textContent = stats.total_turns || 0;
+
+  // ── Chart.js 長條圖 ──
+  const labels = (stats.weekly_trend || []).map(d => d.day);
+  const counts = (stats.weekly_trend || []).map(d => d.count);
+  new Chart(document.getElementById('interactionChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: counts,
+        backgroundColor: counts.map((_, i) =>
+          i === 6 ? 'rgba(6,182,212,0.9)' : 'rgba(99,102,241,0.6)'),
+        borderColor: counts.map((_, i) =>
+          i === 6 ? 'rgba(6,182,212,1)' : 'rgba(99,102,241,1)'),
+        borderWidth: 2,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => ` ${ctx.parsed.y} 次互動` }
+      }},
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { size: 11 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { size: 11 }, stepSize: 1 }, min: 0 }
+      }
+    }
+  });
+
+  // ── 時間軸 ──
+  document.getElementById('timelineDate').textContent = fmtDate(DATA.report_date);
+  const tlContainer = document.getElementById('timeline');
+  tlContainer.innerHTML = '';
+  (DATA.timeline_events || []).forEach((ev, i) => {
+    const cfg = typeConfig[ev.type] || typeConfig.interaction;
+    const isLast = i === DATA.timeline_events.length - 1;
+    tlContainer.insertAdjacentHTML('beforeend', `
+      <div class="relative flex gap-4 pb-${isLast ? '0' : '6'}">
+        ${!isLast ? '<div class="timeline-line"></div>' : ''}
+        <div class="relative z-10 w-10 h-10 rounded-full ${cfg.bg} border ${cfg.border} flex items-center justify-center text-lg shrink-0">${cfg.icon}</div>
+        <div class="flex-1 min-w-0 pt-1">
+          <div class="flex items-center gap-2 flex-wrap mb-1">
+            <span class="text-xs font-bold text-slate-300">${fmt(ev.time || '')}</span>
+            <span class="text-xs px-1.5 py-0.5 rounded-full border bg-sky-500/20 text-sky-300 border-sky-500/30">${ev.type || '互動'}</span>
+          </div>
+          <div class="font-bold text-sm text-white mb-0.5">${ev.title || ''}</div>
+          <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">${ev.description || ''}</p>
+        </div>
+      </div>`);
+  });
+/*
+  // ── Mini 統計卡（右下） ──
+  document.getElementById('miniStats').innerHTML = '';
+  const miniData = [
+    { icon:'💬', label:'本週對話', value: ds.interaction_stats.weekly_total, unit:'次', color:'text-cyan-400' },
+    { icon:'💊', label:'服藥率',   value: '100', unit:'%', color:'text-emerald-400' },
+    { icon:'💧', label:'飲水達成', value: '42',  unit:'%', color:'text-amber-400' },
+  ];
+  miniData.forEach(m => {
+    document.getElementById('miniStats').insertAdjacentHTML('beforeend', `
+      <div class="card p-3 flex flex-col items-center justify-center text-center gap-1">
+        <span class="text-xl">${m.icon}</span>
+        <div class="text-lg font-black ${m.color}">${m.value}<span class="text-xs font-normal">${m.unit}</span></div>
+        <div class="text-xs text-slate-500 leading-tight">${m.label}</div>
+      </div>`);
+  });
+*/
+}
+
+// 執行網頁初始化
+init();
+
+// ══════════════════════════════════════════
+//  📡 即時同步機制：SSE + localStorage 監聽
+// ══════════════════════════════════════════
+
+// ── 即時狀態指示器 ──
+function showLiveIndicator(message, type = 'info') {
+  // 在導覽列顯示即時互動通知
+  let indicator = document.getElementById('liveIndicator');
+  if (!indicator) {
+    const nav = document.querySelector('nav .max-w-screen-xl');
+    if (nav) {
+      nav.insertAdjacentHTML('beforeend', `
+        <div id="liveIndicator" class="fixed top-16 right-4 z-50 px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all duration-300 opacity-0 translate-y-[-8px]"
+             style="backdrop-filter:blur(8px)"></div>
+      `);
+      indicator = document.getElementById('liveIndicator');
+    }
+  }
+  if (!indicator) return;
+
+  const styles = {
+    info:       'bg-cyan-500/20 border border-cyan-500/40 text-cyan-300',
+    processing: 'bg-amber-500/20 border border-amber-500/40 text-amber-300',
+    success:    'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300',
+    error:      'bg-rose-500/20 border border-rose-500/40 text-rose-300',
+  };
+  indicator.className = `fixed top-16 right-4 z-50 px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all duration-300 ${styles[type] || styles.info}`;
+  indicator.textContent = message;
+  indicator.style.opacity = '1';
+  indicator.style.transform = 'translateY(0)';
+
+  // 5 秒後自動淡出
+  clearTimeout(indicator._hideTimer);
+  indicator._hideTimer = setTimeout(() => {
+    indicator.style.opacity = '0';
+    indicator.style.transform = 'translateY(-8px)';
+  }, 5000);
+}
+
+// ── SSE 連線：接收後端即時推送 ──
+let sseRetryCount = 0;
+function connectSSE() {
+  const evtSource = new EventSource('/api/elder/events/stream');
+
+  evtSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === 'heartbeat') return;
+      if (data.type === 'connected') {
+        sseRetryCount = 0;
+        console.log('[Dashboard SSE] 連線成功');
+        return;
+      }
+      // 收到互動事件 → 刷新看板
+      if (data.type === 'speech_interaction') {
+        showLiveIndicator(`🔔 新互動：${data.user_text?.substring(0, 15) || '語音對話'}...`, 'success');
+        // 延遲 1 秒後重新載入資料（等後端寫入完成）
+        setTimeout(() => refreshDashboard(), 1000);
+      }
+    } catch (e) {}
+  };
+
+  evtSource.onerror = () => {
+    evtSource.close();
+    sseRetryCount++;
+    const delay = Math.min(2000 * sseRetryCount, 30000);
+    console.warn(`[Dashboard SSE] 斷線，${delay / 1000}s 後重連...`);
+    setTimeout(connectSSE, delay);
+  };
+}
+
+// ── localStorage 監聯：接收同瀏覽器 index.html 的即時廣播 ──
+window.addEventListener('storage', (event) => {
+  if (event.key !== 'elder_interaction_event') return;
+  try {
+    const data = JSON.parse(event.newValue);
+    if (!data) return;
+
+    switch (data.state) {
+      case 'processing':
+        showLiveIndicator('⏳ 長輩正在語音互動中...', 'processing');
+        break;
+      case 'completed':
+        showLiveIndicator(`✅ 互動完成：${data.user_text?.substring(0, 12) || ''}...`, 'success');
+        // 刷新看板資料
+        setTimeout(() => refreshDashboard(), 1500);
+        break;
+      case 'error':
+        showLiveIndicator('⚠️ 互動異常，請關注', 'error');
+        break;
+    }
+  } catch (e) {}
+});
+
+// ── 刷新看板核心函數 ──
+async function refreshDashboard() {
+  try {
+    const newData = await loadData();
+    // 更新 AI 摘要
+    const summary = newData.today_summary;
+    const summaryEl = document.getElementById('overallSummary');
+    const dateEl = document.getElementById('summaryDate');
+    if (summaryEl) {
+      summaryEl.textContent = summary.text || '等待互動...';
+      summaryEl.classList.remove('fade-up');
+      void summaryEl.offsetWidth;
+      summaryEl.classList.add('fade-up');
+    }
+    if (dateEl) dateEl.textContent = fmtDate(newData.report_date);
+
+    // 更新結構化記錄
+    const sdContainer = document.getElementById('structuredData');
+    if (sdContainer && summary.metrics) {
+      sdContainer.innerHTML = '';
+      const structuredConfig = {
+        diet: { icon:'🍚', label:'飲食' },
+        sleep: { icon:'😴', label:'睡眠' },
+        medication: { icon:'💊', label:'用藥' },
+      };
+      const metricMap = {
+        diet: summary.metrics.diet,
+        sleep: summary.metrics.sleep,
+        medication: summary.metrics.medication_taken ? `已服藥（${summary.metrics.medication_time || ''}）` : '尚未服藥',
+      };
+      Object.entries(metricMap).forEach(([key, val]) => {
+        const cfg = structuredConfig[key];
+        if (!cfg || !val) return;
+        sdContainer.insertAdjacentHTML('beforeend', `
+          <div class="rounded-xl bg-slate-700/50 border border-slate-600/50 p-3">
+            <div class="text-xs font-bold text-slate-400 mb-1.5">${cfg.icon} ${cfg.label}</div>
+            <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">${val}</p>
+          </div>`);
+      });
+    }
+
+    // 更新互動次數
+    const weeklyEl = document.getElementById('weeklyTotal');
+    if (weeklyEl) weeklyEl.textContent = newData.interaction_stats?.total_turns || 0;
+
+    // 更新時間軸
+    const tlContainer = document.getElementById('timeline');
+    if (tlContainer && newData.timeline_events?.length) {
+      const typeConfig = {
+        health: { icon:'💊', bg:'bg-emerald-500/10', border:'border-emerald-500/40' },
+        interaction: { icon:'🤖', bg:'bg-violet-500/10', border:'border-violet-500/40' },
+        activity: { icon:'🚶', bg:'bg-sky-500/10', border:'border-sky-500/40' },
+        alert: { icon:'⚠️', bg:'bg-amber-500/10', border:'border-amber-500/40' },
+      };
+
+      tlContainer.innerHTML = '';
+      newData.timeline_events.slice(0, 8).forEach((ev, i) => {
+        const cfg = typeConfig[ev.type] || typeConfig.interaction;
+        const isLast = i === Math.min(newData.timeline_events.length, 8) - 1;
+        const timeStr = ev.time ? new Date(ev.time).toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', hour12:false}) : '--:--';
+        tlContainer.insertAdjacentHTML('beforeend', `
+          <div class="relative flex gap-4 pb-${isLast ? '0' : '6'}">
+            ${!isLast ? '<div class="timeline-line"></div>' : ''}
+            <div class="relative z-10 w-10 h-10 rounded-full ${cfg.bg} border ${cfg.border} flex items-center justify-center text-lg shrink-0">${cfg.icon}</div>
+            <div class="flex-1 min-w-0 pt-1">
+              <div class="flex items-center gap-2 flex-wrap mb-1">
+                <span class="text-xs font-bold text-slate-300">${timeStr}</span>
+                <span class="text-xs px-1.5 py-0.5 rounded-full border bg-sky-500/20 text-sky-300 border-sky-500/30">${ev.type || '互動'}</span>
+              </div>
+              <div class="font-bold text-sm text-white mb-0.5">${ev.title || '語音互動'}</div>
+              <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">${ev.description || ''}</p>
+            </div>
+          </div>`);
+      });
+    }
+
+    console.log('[Dashboard] 資料已即時刷新');
+  } catch (e) {
+    console.warn('[Dashboard] 刷新失敗:', e.message);
+  }
+}
+
+// 輔助函數（供 refreshDashboard 使用）
+function fmtDate(str) {
+  if (!str) return '日期未知';
+  const parts = str.split(/[-/]/);
+  if (parts.length < 3) return str;
+  const [y, m, d] = parts;
+  return `${y} 年 ${m} 月 ${d} 日`;
+}
+
+// ── 啟動 SSE 連線 ──
+connectSSE();
+
+// ── 備援：每 30 秒自動輪詢一次（防止 SSE 斷線時看板不更新）──
+setInterval(refreshDashboard, 30000);
+</script>
+</body>
+</html>

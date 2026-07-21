@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# 虛擬環境
+venv/
+.venv/
+env/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 敏感檔案
+api_key.txt
+*.key
+
+# 音訊暫存（運行時動態產生）
+*.mp3
+*.wav
+_stream_audio_*.mp3
+server_*.mp3
+last_elder_speech.wav
+tts_module/*.mp3
+tts_module/*.wav
+
+# Vosk 模型（體積大）
+vosk-model*/
+
+# OS 產生
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# 日誌
+*.log
+
+# 舊的資料檔案（已廢棄）
+data_store.json
+Long_Short_Term_Memory_Control/Long_Term_Memory.json
+Long_Short_Term_Memory_Control/Short_Term_Memory.json
+
+# 運行時資料（data/ 下的 JSON 會在首次啟動時自動建立）
+# 如需追蹤初始資料，可移除以下行
+# data/*.json
+
+# 模型訓練產出
+my_whisper_pytorch_module/
+whisper_hf_output/
