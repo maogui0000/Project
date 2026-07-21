@@ -56,3 +56,9 @@ Long_Short_Term_Memory_Control/Short_Term_Memory.json
 # 模型訓練產出
 my_whisper_pytorch_module/
 whisper_hf_output/
+
+# 大型模型檔案（超過 GitHub 100MB 限制）
+models/
+speech/*.pt
+*.safetensors
+abc.csv
