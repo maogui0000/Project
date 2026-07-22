@@ -1,15 +1,10 @@
 {
-  "elder_id": "elder_001",
+  "elder_id": "elder_mrw64yy70lbt",
   "meta": {
-    "last_analyzed_at": "2026-07-22T22:22:15.155502"
+    "last_analyzed_at": null
   },
   "extracted_preferences": {
-    "likes": [
-      "未提及",
-      "饅頭配青菜",
-      "沒有提到飲食",
-      "null"
-    ],
+    "likes": [],
     "dislikes": []
   },
   "historical_habits": {

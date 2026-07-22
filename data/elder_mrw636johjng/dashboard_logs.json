@@ -1,0 +1,76 @@
+{
+  "elder_id": "elder_mrw636johjng",
+  "report_date": "2026-07-22",
+  "line_notification_status": {
+    "trigger_time": "19:00:00",
+    "is_sent": false
+  },
+  "today_summary": {
+    "text": "長者表示想吃饅頭配青菜，但後來又不想吃了，並表示感謝。",
+    "metrics": {
+      "diet": "饅頭配青菜",
+      "sleep": "對話中未提及相關資訊",
+      "medication_taken": false,
+      "medication_time": null
+    }
+  },
+  "interaction_stats": {
+    "total_turns": 4,
+    "weekly_trend": [
+      {
+        "day": "週一",
+        "count": 0
+      },
+      {
+        "day": "週二",
+        "count": 0
+      },
+      {
+        "day": "週三",
+        "count": 4
+      },
+      {
+        "day": "週四",
+        "count": 0
+      },
+      {
+        "day": "週五",
+        "count": 0
+      },
+      {
+        "day": "週六",
+        "count": 0
+      },
+      {
+        "day": "週日",
+        "count": 0
+      }
+    ]
+  },
+  "timeline_events": [
+    {
+      "time": "2026-07-22T22:22:14.250326",
+      "type": "interaction",
+      "title": "智慧語音關懷",
+      "description": "長者說：拜拜。\nAI回覆：晚安，阿嬤，睡覺吧。"
+    },
+    {
+      "time": "2026-07-22T22:21:10.735209",
+      "type": "interaction",
+      "title": "智慧語音關懷",
+      "description": "長者說：但我突然又不想吃了，謝謝你。\nAI回覆：沒關係，阿嬤先休息吧。"
+    },
+    {
+      "time": "2026-07-22T22:18:54.249841",
+      "type": "interaction",
+      "title": "智慧語音關懷",
+      "description": "長者說：我想吃一點饅頭配青菜。\nAI回覆：好的，我會準備一份饅頭配青菜的。"
+    },
+    {
+      "time": "2026-07-22T22:18:30.539842",
+      "type": "interaction",
+      "title": "智慧語音關懷",
+      "description": "長者說：這2天濕氣好重啊我的膝骨頭又在酸痛了想起床都\nAI回覆：阿嬤，這2天天氣真的濕氣重，膝骨頭酸痛讓人不想動。別再想睡，先喝點水再看， 看看有沒有想吃點東西，如果想吃飯，我幫你準備一下吧。"
+    }
+  ]
+}

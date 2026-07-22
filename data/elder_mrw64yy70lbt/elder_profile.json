@@ -1,0 +1,28 @@
+{
+  "elder_id": "elder_mrw64yy70lbt",
+  "meta": {
+    "created_at": "2026-07-22T22:19:20.572766",
+    "last_updated": "2026-07-22T22:19:20.575936"
+  },
+  "personal_info": {
+    "name": "洪韡儀",
+    "nickname": "鮪魚",
+    "gender": "female",
+    "age": 88,
+    "birth_year": null,
+    "location": "宜蘭市"
+  },
+  "localization_settings": {
+    "primary_language": "中文",
+    "secondary_language": "",
+    "tts_accent": "台灣國語腔調",
+    "persona_relation": "貼心孝順的晚輩"
+  },
+  "care_baseline": {
+    "chronic_diseases": [
+      "糖尿病"
+    ],
+    "emergency_contact": "",
+    "core_emotional_need": "獨居"
+  }
+}

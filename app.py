@@ -85,6 +85,23 @@ app.add_middleware(
 dm = DataManager()
 
 
+# ── 離開意圖偵測 ─────────────────────────────────────
+_FAREWELL_KEYWORDS = [
+    '掰掰', '拜拜', '再見', '結束', 'bye', '不用了', '不需要了',
+    '我要走了', '先這樣', '好了', '沒事了', '不聊了', '要睡了',
+    '晚安', '我走了', '下次再聊', '夠了'
+]
+
+def _detect_farewell(user_text: str) -> bool:
+    """判斷使用者是否表達離開/結束對話的意圖"""
+    text = user_text.lower().strip()
+    # 關鍵字快速匹配
+    for kw in _FAREWELL_KEYWORDS:
+        if kw in text:
+            return True
+    return False
+
+
 # ═══════════════════════════════════════════════════════
 # 📡 即時事件廣播機制（供 Dashboard SSE 使用）
 # ═══════════════════════════════════════════════════════
@@ -217,7 +234,10 @@ async def handle_chat_stream(
 
         _total = _t.time() - _total_start
         print(f"═══ ⏱️ [Chat 總結] 全程 {_total:.2f}s / {sentence_index} 句 / {len(full_reply)} 字 ═══")
-        yield f"data: {json.dumps({'type': 'done', 'full_reply': full_reply}, ensure_ascii=False)}\n\n"
+        
+        # 判斷使用者是否想結束對話
+        end_session = _detect_farewell(user_text)
+        yield f"data: {json.dumps({'type': 'done', 'full_reply': full_reply, 'end_session': end_session}, ensure_ascii=False)}\n\n"
 
         asyncio.ensure_future(_post_chat_tasks_text(user_text, full_reply, elder_id))
 

@@ -266,9 +266,9 @@ function logout() {
 
 // ═══════════════════ VAD 參數設定 ═══════════════════
 const THRESHOLD  = 25;    // 音量門檻，防環境雜音
-const SILENCE_MS = 1200;  // 靜音幾毫秒後送出
+const SILENCE_MS = 1500;  // 靜音 1.5 秒後送出（確保使用者說完）
 const MIN_MS     = 300;   // 最短有效錄音時間
-const MAX_REC_MS = 8000;  // 單次最長錄音（超時強制送出）
+const MAX_REC_MS = 15000; // 單次最長錄音 15 秒
 
 // ═══════════════════ 系統狀態 ═══════════════════
 let STATE = 'idle';
@@ -617,7 +617,7 @@ async function streamChat(userText) {
             }));
           } catch(e) {}
 
-          if (['再見','拜拜','不需要了'].some(w => fullReply.includes(w))) {
+          if (data.end_session) {
             isSessionActive = false;
           }
         }
