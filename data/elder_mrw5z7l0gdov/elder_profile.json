@@ -1,0 +1,28 @@
+{
+  "elder_id": "elder_mrw5z7l0gdov",
+  "meta": {
+    "created_at": "2026-07-22T22:14:54.397537",
+    "last_updated": "2026-07-22T22:14:54.400870"
+  },
+  "personal_info": {
+    "name": "陳劉月香",
+    "nickname": "阿香婆婆",
+    "gender": "female",
+    "age": 74,
+    "birth_year": null,
+    "location": "苗栗縣大湖鄉"
+  },
+  "localization_settings": {
+    "primary_language": "中文",
+    "secondary_language": "",
+    "tts_accent": "台灣國語腔調",
+    "persona_relation": "貼心孝順的晚輩"
+  },
+  "care_baseline": {
+    "chronic_diseases": [
+      "高血壓、糖尿病"
+    ],
+    "emergency_contact": "",
+    "core_emotional_need": "獨居、腿腳不方便"
+  }
+}

@@ -118,7 +118,7 @@ def get_elder_daily_summary(current_chat: str = None) -> dict:
 
     try:
         response = chat(
-            model='gemma2',
+            model=config.OLLAMA_MODEL,
             format='json',
             messages=[
                 {"role": "system", "content": system_prompt},

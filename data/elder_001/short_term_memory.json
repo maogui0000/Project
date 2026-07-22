@@ -1,0 +1,10 @@
+{
+  "elder_id": "elder_001",
+  "current_session_id": "sess_20260722_001",
+  "active_context": {
+    "weather": "",
+    "current_time": "2026-07-22T22:03:33.949452",
+    "topic_focus": ""
+  },
+  "dialogue_history": []
+}

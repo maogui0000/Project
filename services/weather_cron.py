@@ -16,6 +16,115 @@ import config
 # 隱藏跳過憑證的紅色警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+
+# ═══════════════════════════════════════════════════════
+# 情緒上下文區塊（動態注入 Environmental_Prompts.txt）
+# ═══════════════════════════════════════════════════════
+
+# 情緒段落的開始/結束標記（用於定位替換）
+_EMOTION_SECTION_START = "[長者今日語音情緒狀態]"
+_EMOTION_SECTION_END = "[/長者今日語音情緒狀態]"
+
+
+def _get_emotion_prompt_section() -> str:
+    """
+    讀取當前情緒摘要，生成環境提示詞中的情緒區塊。
+    如果尚無情緒資料，回傳空的佔位區塊。
+    """
+    try:
+        from speech.emotion_recognition import get_emotion_summary
+        summary = get_emotion_summary()
+    except Exception:
+        summary = None
+
+    if not summary or summary.get("total_detections", 0) == 0:
+        return (
+            f"{_EMOTION_SECTION_START}\n"
+            f"- 今日尚未偵測到長者語音情緒資料。\n"
+            f"{_EMOTION_SECTION_END}\n\n"
+            f"[情緒感知 AI 行為指引]\n"
+            f"4. 當語音情緒偵測到長者情緒為「難過」或「生氣」時，請用更加溫柔、同理的語氣回覆，主動關心長輩的心情。\n"
+            f"5. 當偵測到「開心」時，可以順著長輩的好心情互動，讓對話更加愉快自然。\n"
+            f"6. 當偵測到「恐懼」或「吃驚」時，請先安撫長輩情緒，詢問是否有需要幫忙的地方。\n"
+            f"7. 情緒辨識僅作為輔助參考，回覆時不要直接說「我偵測到您的情緒是...」，而是自然地調整語氣和關懷程度。"
+        )
+
+    dominant = summary.get("dominant_emotion_zh", "中立")
+    latest = summary.get("latest_emotion_zh", "中立")
+    total = summary.get("total_detections", 0)
+    timeline = summary.get("emotion_timeline", "")
+    distribution = summary.get("emotion_distribution", {})
+
+    # 格式化情緒分布
+    dist_parts = []
+    for emo_en, count in sorted(distribution.items(), key=lambda x: -x[1]):
+        from speech.emotion_recognition import EMOTION_LABELS
+        emo_zh = emo_en
+        for info in EMOTION_LABELS.values():
+            if info["en"] == emo_en:
+                emo_zh = info["zh"]
+                break
+        dist_parts.append(f"{emo_zh}({count}次)")
+    dist_str = "、".join(dist_parts)
+
+    return (
+        f"{_EMOTION_SECTION_START}\n"
+        f"- 今日情緒偵測次數：{total} 次\n"
+        f"- 主導情緒：{dominant}\n"
+        f"- 最近一次情緒：{latest}\n"
+        f"- 情緒分布：{dist_str}\n"
+        f"- 情緒時間軸：{timeline}\n"
+        f"{_EMOTION_SECTION_END}\n\n"
+        f"[情緒感知 AI 行為指引]\n"
+        f"4. 當語音情緒偵測到長者情緒為「難過」或「生氣」時，請用更加溫柔、同理的語氣回覆，主動關心長輩的心情。\n"
+        f"5. 當偵測到「開心」時，可以順著長輩的好心情互動，讓對話更加愉快自然。\n"
+        f"6. 當偵測到「恐懼」或「吃驚」時，請先安撫長輩情緒，詢問是否有需要幫忙的地方。\n"
+        f"7. 情緒辨識僅作為輔助參考，回覆時不要直接說「我偵測到您的情緒是...」，而是自然地調整語氣和關懷程度。\n"
+        f"8. 目前長者主導情緒為「{dominant}」，最新情緒為「{latest}」，請據此微調回覆風格。"
+    )
+
+
+def update_emotion_in_prompt():
+    """
+    即時更新 Environmental_Prompts.txt 中的情緒區塊。
+    此函數在每次情緒辨識完成後呼叫，不需等待 6 小時天氣更新。
+    
+    策略：讀取現有檔案 → 定位情緒區塊 → 替換為最新情緒資料 → 寫回。
+    若檔案中尚無情緒區塊，則附加在末尾。
+    """
+    prompt_path = config.ENVIRONMENTAL_PROMPTS_PATH
+    
+    if not os.path.exists(prompt_path):
+        print("⚠️ [情緒更新] Environmental_Prompts.txt 不存在，跳過情緒注入")
+        return
+    
+    try:
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        
+        # 生成最新的情緒區塊
+        new_emotion_section = _get_emotion_prompt_section()
+        
+        # 檢查是否已有情緒區塊
+        if _EMOTION_SECTION_START in content:
+            # 找到舊區塊的範圍並替換
+            start_idx = content.index(_EMOTION_SECTION_START)
+            
+            # 找到情緒行為指引的結尾（第 8 條或區塊結束標記之後的內容）
+            # 我們替換從 _EMOTION_SECTION_START 到文件末尾（因為情緒區塊在最後面）
+            content = content[:start_idx].rstrip() + "\n\n" + new_emotion_section + "\n"
+        else:
+            # 尚無情緒區塊，附加在末尾
+            content = content.rstrip() + "\n\n" + new_emotion_section + "\n"
+        
+        with open(prompt_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        
+        print(f"✅ [情緒更新] Environmental_Prompts.txt 情緒區塊已更新")
+    
+    except Exception as e:
+        print(f"⚠️ [情緒更新] 寫入失敗: {e}")
+
 def fetch_and_generate_prompt():
     print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] 正在更新氣象與日落資料並重新生成 Prompt...")
     
@@ -128,6 +237,10 @@ def fetch_and_generate_prompt():
     # ==========================================
     # 3. 封裝生成最終的 System Prompt
     # ==========================================
+    
+    # 讀取當前情緒摘要（如有）
+    emotion_section = _get_emotion_prompt_section()
+    
     prompt_template = f"""# SYSTEM ENVIRONMENT CONTEXT (系統即時環境背景)
 # 檔案更新時間: {now.strftime('%Y-%m-%d %H:%M:%S')}
 # 這是系統每 6 小時自動更新的全台即時氣象與日落安全數據。請 AI 在回覆時，將這些環境脈絡納入考量：
@@ -139,6 +252,8 @@ def fetch_and_generate_prompt():
 1. 當使用者聊到出門、散步、回家、天氣、問候時，請務必比對使用者所在縣市的「日落安全」狀態。
 2. 如果使用者的縣市狀態顯示為「⚠️ 警告」或「🔴 已日落」，請用極度溫柔、溫暖的語氣，貼心地提醒長輩「天色不早了/外面天黑了，散步要注意安全、早點回家休息、看清步伐」。
 3. 同時結合天氣資訊（如降雨機率、保暖穿搭建議）給予最完善的長照關懷。
+
+{emotion_section}
 """
 
     # 寫入 (覆寫) Environmental_Prompts.txt

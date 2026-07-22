@@ -1,0 +1,19 @@
+{
+  "elder_id": "elder_mrw5z7l0gdov",
+  "meta": {
+    "last_analyzed_at": null
+  },
+  "extracted_preferences": {
+    "likes": [],
+    "dislikes": []
+  },
+  "historical_habits": {
+    "morning_routine": "",
+    "afternoon_routine": ""
+  },
+  "medication_tracker": {
+    "prescription_name": "",
+    "requirement": "",
+    "compliance_rate_this_week": 0.0
+  }
+}

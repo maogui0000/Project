@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>阿香婆婆關懷系統</title>
+  <title>語音互動陪伴</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* 登入頁背景 */
@@ -37,89 +37,81 @@
      1. 角色登入畫面 (預設顯示)
 ══════════════════════════════════════════ -->
 <div id="loginScreen" class="fixed inset-0 netflix-bg z-50 overflow-y-auto py-10 flex flex-col items-center transition-opacity duration-500">
-  <div class="text-center max-w-4xl px-4">
+  <div class="text-center max-w-lg px-4">
     <!-- 頂部系統 LOGO -->
-    <div class="flex justify-center mb-10">
-      <!-- 學校 Logo 圖片 -->
+    <div class="flex justify-center mb-6">
       <img src="images/school_logo.png" 
            alt="學校 Logo" 
            class="h-16 sm:h-20 object-contain drop-shadow-sm"
-           onerror="this.style.display='none'; document.getElementById('schoolTextLogo').classList.remove('hidden');">
-      
-      <!-- 備用文字 Logo（萬一圖片路徑錯了或加載失敗，會自動顯示這個文字，避免畫面空掉） -->
-      <div id="schoolTextLogo" class="hidden text-slate-800 font-bold text-2xl tracking-wider">
-        🏫 智慧長照關懷學校
-      </div>
+           onerror="this.style.display='none';">
     </div>
 
-    <h1 class="text-[#000000] text-3xl sm:text-4xl font-bold tracking-wide mb-10">誰要聊天？</h1>
+    <h1 class="text-[#000000] text-2xl sm:text-3xl font-bold tracking-wide mb-6">歡迎使用智慧關懷系統</h1>
+    <p class="text-slate-500 text-sm mb-8">請先填寫基本資料，讓小黃更認識您</p>
     
-    <!-- 3 位使用者網格 -->
-    <div class="flex flex-wrap justify-center gap-6 sm:gap-8">
-      
-      <!-- 使用者 1: 阿香婆婆 -->
-      <div onclick="selectUser('elder_001', '阿香婆婆', 'images/user1.jpg', '👵')" class="group flex flex-col items-center gap-3 cursor-pointer">
-        <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-lg overflow-hidden border-4 border-transparent group-hover:border-fuchsia-400 transition-all duration-200">
-          <!-- ⚠️ 可替換為您自己的照片 src="images/user1.jpg" -->
-          <img src="images/user1.jpg" 
-               onerror="this.src='https://api.dicebear.com/7.x/adventurer/svg?seed=Granny'"
-               alt="阿香婆婆" class="w-full h-full object-cover">
+    <!-- 註冊表單 -->
+    <div class="bg-white rounded-xl border border-slate-200 p-6 text-left space-y-4 shadow-sm">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">姓名 <span class="text-red-400">*</span></label>
+          <input id="reg_name" type="text" placeholder="例：陳劉月香" 
+                 class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
         </div>
-        <span class="text-slate-400 text-sm sm:text-base group-hover:text-fuchsia-400 transition-colors duration-200">阿香婆婆</span>
-      </div>
-
-      <!-- 使用者 2: 勇伯 -->
-      <div onclick="selectUser('elder_002', '勇伯', 'images/user2.jpg', '👴')" class="group flex flex-col items-center gap-3 cursor-pointer">
-        <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-lg overflow-hidden border-4 border-transparent group-hover:border-sky-400 transition-all duration-200">
-          <!-- ⚠️ 可替換為您自己的照片 src="images/user2.jpg" -->
-          <img src="images/user2.jpg" 
-               onerror="this.src='https://api.dicebear.com/7.x/adventurer/svg?seed=Grandpa'"
-               alt="勇伯" class="w-full h-full object-cover">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">暱稱 <span class="text-red-400">*</span></label>
+          <input id="reg_nickname" type="text" placeholder="例：阿香婆婆" 
+                 class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
         </div>
-        <span class="text-slate-400 text-sm sm:text-base group-hover:text-sky-400 transition-colors duration-200">勇伯</span>
-      </div>
-
-      <!-- 使用者 3: 秀琴媽媽 -->
-      <div onclick="selectUser('elder_003', '秀琴媽媽', 'images/user3.jpg', '👩‍🦳')" class="group flex flex-col items-center gap-3 cursor-pointer">
-        <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-lg overflow-hidden border-4 border-transparent group-hover:border-emerald-400 transition-all duration-200">
-          <!-- ⚠️ 可替換為您自己的照片 src="images/user3.jpg" -->
-          <img src="images/user3.jpg" 
-               onerror="this.src='https://api.dicebear.com/7.x/adventurer/svg?seed=Auntie'"
-               alt="秀琴媽媽" class="w-full h-full object-cover">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">年齡</label>
+          <input id="reg_age" type="number" placeholder="例：74" 
+                 class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
         </div>
-        <span class="text-slate-400 text-sm sm:text-base group-hover:text-emerald-400 transition-colors duration-200">秀琴媽媽</span>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">居住地 <span class="text-red-400">*</span></label>
+          <input id="reg_location" type="text" placeholder="例：苗栗縣大湖鄉" 
+                 class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">性別 <span class="text-red-400">*</span></label>
+          <select id="reg_gender" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+            <option value="">請選擇</option>
+            <option value="male">男（阿公/爺爺）</option>
+            <option value="female">女（阿嬤/奶奶）</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">慢性疾病</label>
+          <input id="reg_health" type="text" placeholder="例：高血壓、糖尿病" 
+                 class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+        </div>
       </div>
-
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">照護備註</label>
+        <textarea id="reg_notes" rows="2" placeholder="例：獨居、容易跌倒..."
+                  class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none resize-none"></textarea>
+      </div>
     </div>
+
     <!-- AI 警語同意書 -->
-    <div class="mt-12 max-w-lg mx-auto bg-slate-50 p-5 rounded-lg border border-slate-200 text-left">
+    <div class="mt-6 bg-slate-50 p-5 rounded-lg border border-slate-200 text-left">
       <div class="flex items-start gap-3">
-        <!-- 核取方塊 -->
         <input type="checkbox" id="agreeCheckbox" class="mt-1.5 w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500">
-        
-        <!-- 警語詳細內容（每行換行，標題粗體） -->
         <label for="agreeCheckbox" class="text-xs text-slate-600 leading-relaxed cursor-pointer flex flex-col gap-2">
           <strong class="text-slate-800 text-sm">【系統使用須知與隱私保護宣告】</strong>
-          
-          <div>
-            <strong class="text-slate-700">1. 非醫療診斷：</strong>本陪伴系統所提供之對話內容與健康生活摘要，僅供生活陪伴與日常健康參考，不具備醫療診斷或治療建議之功效。如有任何身體不適，請務必諮詢專業醫療人員。
-          </div>
-          
-          <div>
-            <strong class="text-slate-700">2. 隱私與個資保護：</strong>本系統重視隱私。您的語音與對話記錄將採用加密技術傳輸及儲存，且本系統不蒐集身分證字號、病歷號等敏感性個人資料。
-          </div>
-          
-          <div>
-            <strong class="text-slate-700">3. AI 限制宣告：</strong>本系統採用生成式 AI 技術，對話與摘要內容可能包含由 AI 生成之非絕對精確之資訊（幻覺），實際狀況請以照護人員與家屬之親自確認為準。
-          </div>
-          
-          <div class="mt-1 text-emerald-600 font-semibold text-[11px] flex items-center gap-1">
-            <span>💡 閱讀完畢請勾選左側方框，即可點選上方角色開始聊天。</span>
-          </div>
+          <div><strong class="text-slate-700">1. 非醫療診斷：</strong>本陪伴系統所提供之對話內容與健康生活摘要，僅供生活陪伴與日常健康參考，不具備醫療診斷或治療建議之功效。如有任何身體不適，請務必諮詢專業醫療人員。</div>
+          <div><strong class="text-slate-700">2. 隱私與個資保護：</strong>本系統重視隱私。您的語音與對話記錄將採用加密技術傳輸及儲存，且本系統不蒐集身分證字號、病歷號等敏感性個人資料。</div>
+          <div><strong class="text-slate-700">3. AI 限制宣告：</strong>本系統採用生成式 AI 技術，對話與摘要內容可能包含由 AI 生成之非絕對精確之資訊，實際狀況請以照護人員與家屬之親自確認為準。</div>
+          <div class="mt-1 text-emerald-600 font-semibold text-[11px]">閱讀完畢請勾選左側方框，即可點擊下方按鈕開始使用。</div>
         </label>
       </div>
     </div>
-    
+
+    <!-- 註冊按鈕 -->
+    <button onclick="registerAndStart()" 
+            class="mt-6 w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-lg transition shadow-lg">
+      開始使用
+    </button>
   </div>
 </div>
 
@@ -131,10 +123,10 @@
   <!-- 登出 / 切換使用者按鈕 (右上角) -->
   <div class="absolute top-4 right-4 flex items-center gap-2">
     <a href="dashboard.html" target="_blank" class="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold transition">
-      📊 照護看板
+      照護看板
     </a>
     <button onclick="logout()" class="px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-600 text-xs font-bold transition">
-      🔄 切換使用者
+      重新註冊
     </button>
   </div>
 
@@ -188,71 +180,87 @@
 
 <script>
 // ═══════════════════ 角色登入切換邏輯 ═══════════════════
-let currentUserId = "";
+let currentUserId = "elder_001";
 
-function selectUser(id, name, imgUrl, defaultEmoji) {
-
-  // 💡 檢查是否有勾選 AI 警語同意書（若未勾選則跳出提示，並中斷登入）
+async function registerAndStart() {
+  // 檢查同意書
   const agreeCheckbox = document.getElementById('agreeCheckbox');
-  if (agreeCheckbox && !agreeCheckbox.checked) {
-    alert('請先閱讀並勾選下方的【系統使用須知與隱私保護宣告】，即可開始使用喔！');
-    return; // 直接中斷執行，不進入主畫面
+  if (!agreeCheckbox.checked) {
+    alert('請先閱讀並勾選【系統使用須知與隱私保護宣告】');
+    return;
   }
 
-  currentUserId = id;
+  // 檢查必填欄位
+  const name = document.getElementById('reg_name').value.trim();
+  const nickname = document.getElementById('reg_nickname').value.trim();
+  const location = document.getElementById('reg_location').value.trim();
+  const gender = document.getElementById('reg_gender').value;
   
-  // 1. 將選取的長輩 ID 存入瀏覽器快取 (讓 Dashboard 後台也能讀取當前是誰)
-  localStorage.setItem('active_elder_id', id);
-  
-  // 2. 動態更新對話主畫面的「名稱」與「頭像」
-  document.getElementById('mainTitle').textContent = `${name}，今天好嗎？`;
-  
-  const mainImg = document.getElementById('mainAvatar');
-  const mainEmoji = document.getElementById('mainEmoji');
-  
-  mainImg.src = imgUrl;
-  mainImg.onload = () => {
-    mainImg.classList.remove('hidden');
-    mainEmoji.classList.add('hidden');
-  };
-  mainImg.onerror = () => {
-    // 萬一圖片載入失敗，顯示 Emoji 備份
-    mainImg.classList.add('hidden');
-    mainEmoji.textContent = defaultEmoji;
-    mainEmoji.classList.remove('hidden');
-  };
+  if (!name || !nickname || !location || !gender) {
+    alert('請填寫姓名、暱稱、居住地與性別');
+    return;
+  }
 
-  // 3. 執行淡出效果
+  // 送出註冊資料到後端
+  try {
+    // 產生唯一的 elder_id（用時間戳 + 隨機碼）
+    const elderId = 'elder_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    
+    const res = await fetch('/api/elder/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        elder_id: elderId,
+        name: name,
+        nickname: nickname,
+        age: parseInt(document.getElementById('reg_age').value) || null,
+        location: location,
+        primary_language: '中文',
+        gender: gender,
+        health_status: document.getElementById('reg_health').value.split(/[,，]/).map(s => s.trim()).filter(Boolean),
+        care_notes: document.getElementById('reg_notes').value.trim()
+      })
+    });
+    if (!res.ok) throw new Error('註冊失敗');
+    
+    // 儲存到 localStorage，後續 API 呼叫都用這個 ID
+    currentUserId = elderId;
+    localStorage.setItem('active_elder_id', elderId);
+    localStorage.setItem('elder_nickname', nickname);
+  } catch (e) {
+    alert('資料儲存失敗：' + e.message);
+    return;
+  }
+
+  // 更新對話畫面
+  const genderTitle = gender === 'male' ? '👴' : '👵';
+  document.getElementById('mainTitle').textContent = `${nickname}，今天好嗎？`;
+  document.getElementById('mainAvatar').classList.add('hidden');
+  document.getElementById('mainEmoji').textContent = genderTitle;
+  document.getElementById('mainEmoji').classList.remove('hidden');
+
+  // 淡出登入畫面，進入對話
   const login = document.getElementById('loginScreen');
   login.style.opacity = '0';
   setTimeout(() => {
     login.classList.add('hidden');
-    
-    // 4. 顯示語音對話主畫面，並播放淡入動畫
     const app = document.getElementById('mainApp');
     app.classList.remove('hidden');
     app.classList.add('fade-up');
-    
-    // 5. 💡 【關鍵安全修改】只有等長輩登入後，才真正啟動麥克風監聽！
     initWakeWordDetection();
   }, 500);
 }
 
 function logout() {
-  // 1. 停止所有當前錄音與語音播放
   stopAll();
-  
-  // 💡 【新增】重置並隱藏前一位使用者的對話框
   const replyBox = document.getElementById('replyBox');
   const replyText = document.getElementById('replyText');
-  if (replyBox) replyBox.style.display = 'none'; // 隱藏對話框
-  if (replyText) replyText.textContent = '';     // 清空文字內容
-  
-  // 隱藏對話主畫面，重置並顯示登入畫面
+  if (replyBox) replyBox.style.display = 'none';
+  if (replyText) replyText.textContent = '';
   document.getElementById('mainApp').classList.add('hidden');
   const login = document.getElementById('loginScreen');
   login.classList.remove('hidden');
-  void login.offsetWidth; // 強制重繪以順利套用動畫
+  void login.offsetWidth;
   login.style.opacity = '1';
 }
 
@@ -310,13 +318,13 @@ function onBtnClick() {
   }
 }
 
-// ═══════════════════ 喚醒詞監聽 ═══════════════════
+// ═══════════════════ 喚醒詞監聯 ═══════════════════
 function initWakeWordDetection() {
   if (isSessionActive) { startListening(); return; }
 
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    isSessionActive = true;
-    startListening();
+    // 瀏覽器不支援 Speech Recognition，顯示守護中狀態，需按按鈕開始
+    setUI('waiting_wake');
     return;
   }
 
@@ -344,8 +352,19 @@ function initWakeWordDetection() {
     else if (isSessionActive) startListening();
   };
 
-  recognition.onerror = () => {};
-  recognition.start();
+  recognition.onerror = (e) => {
+    // Speech Recognition 啟動失敗（可能是非 HTTPS 環境），停留在守護模式
+    console.warn('SpeechRecognition error:', e.error);
+    setUI('waiting_wake');
+  };
+
+  try {
+    recognition.start();
+  } catch (e) {
+    // 啟動失敗也顯示守護中，等使用者手動按按鈕
+    console.warn('SpeechRecognition start failed:', e);
+    setUI('waiting_wake');
+  }
 }
 
 // ═══════════════════ 開始錄音 ═══════════════════
@@ -676,10 +695,15 @@ function waitForQueueEmpty() {
 // ═══════════════════ 顯示回應 ═══════════════════
 let _isShowingThinking = false;
 
+// 移除 emoji 的工具函數
+function stripEmoji(str) {
+  return str.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FAFF}\u{2702}-\u{27B0}\u{2600}-\u{26FF}\u{FE0F}\u{200D}]/gu, '').trim();
+}
+
 function showReply(text) {
   // 確保先停止 thinking 動畫
   clearThinking();
-  replyText.textContent = text;
+  replyText.textContent = stripEmoji(text);
   replyBox.style.display = 'block';
 }
 

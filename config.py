@@ -34,6 +34,12 @@ WHISPER_WEIGHTS_PATH = os.getenv(
 # Whisper 模型大小（備援模式）
 WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL", "base")
 
+# emotion2vec+ 語音情緒辨識模型路徑
+EMOTION_MODEL_PATH = os.getenv(
+    "EMOTION_MODEL_PATH",
+    "/home/mit/.cache/modelscope/models/iic--emotion2vec_plus_base/snapshots/master"
+)
+
 # ═══════════════════════════════════════════════════════
 # ASR 效能優化設定
 # ═══════════════════════════════════════════════════════
@@ -55,7 +61,7 @@ ASR_SILENCE_FRAME_MS = int(os.getenv("ASR_SILENCE_FRAME_MS", "30"))
 # ═══════════════════════════════════════════════════════
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma2")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma2:2b")
 
 # ═══════════════════════════════════════════════════════
 # TTS 語音合成設定

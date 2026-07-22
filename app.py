@@ -32,6 +32,10 @@ from core.voice_assistant import get_assistant
 import edge_tts
 from speech.asr_tts import audio_to_text, VOICES, synthesize_sentence_to_bytes
 
+# ── 語音情緒辨識 ─────────────────────────────────────
+from speech.emotion_recognition import recognize_emotion, log_emotion, get_emotion_summary
+from services.weather_cron import update_emotion_in_prompt
+
 # ── 串流 LLM 逐句生成 ───────────────────────────────
 from core.ai_chat import ask_ollama_stream_sentences
 
@@ -107,7 +111,8 @@ def broadcast_event(event_data: dict):
 def get_elder_dashboard_data(elder_id: str):
     """回傳整合後的完整看板資料"""
     try:
-        data = dm.get_full_dashboard_data()
+        elder_dm = DataManager(elder_id=elder_id)
+        data = elder_dm.get_full_dashboard_data()
         return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"資料讀取失敗: {str(e)}")
@@ -134,8 +139,11 @@ async def handle_chat_stream(
     
     print(f"🔥 [Chat] 收到文字：{user_text}")
     
+    # 為該長者建立 DataManager
+    elder_dm = DataManager(elder_id=elder_id)
+    
     # 組合 prompt
-    history_ctx = dm.get_history_summary_text()
+    history_ctx = elder_dm.get_history_summary_text()
     full_prompt = f"{history_ctx}長者最新說的話：{user_text}"
 
     async def _post_chat_tasks_text(u_text: str, ai_text: str, eid: str):
@@ -143,7 +151,7 @@ async def handle_chat_stream(
         import time as _bt
         _bg_start = _bt.time()
         try:
-            dm.record_full_interaction(u_text, ai_text)
+            elder_dm.record_full_interaction(u_text, ai_text)
         except Exception as e:
             print(f"⚠️ [背景] record_full_interaction: {e}")
         try:
@@ -160,7 +168,7 @@ async def handle_chat_stream(
             metrics = {}
             if structured.get("diet"): metrics["diet"] = structured["diet"]
             if structured.get("sleep"): metrics["sleep"] = structured["sleep"]
-            if summary_text: dm.update_today_summary(summary_text, metrics)
+            if summary_text: elder_dm.update_today_summary(summary_text, metrics)
         except Exception:
             pass
         broadcast_event({"type": "speech_interaction", "elder_id": eid, "user_text": u_text, "ai_reply": ai_text, "summary_updated": True})
@@ -275,11 +283,19 @@ async def handle_elder_speech(
     _step_start = _t.time()
     loop = asyncio.get_event_loop()
     try:
-        user_text = await loop.run_in_executor(None, audio_to_text, audio_filename)
+        # 並行執行 ASR + 情緒辨識（兩者都是 CPU-bound，用 executor 避免阻塞）
+        asr_task = loop.run_in_executor(None, audio_to_text, audio_filename)
+        emotion_task = loop.run_in_executor(None, recognize_emotion, audio_filename)
+        user_text, emotion_result = await asyncio.gather(asr_task, emotion_task)
     except Exception as asr_err:
-        print(f"🚨 ASR 辨識失敗: {asr_err}")
+        print(f"🚨 ASR/情緒辨識失敗: {asr_err}")
         user_text = None
+        emotion_result = {"emotion_zh": "中立", "emotion_en": "neutral", "emotion_index": 4, "confidence": 0.0, "all_scores": {}}
     _asr_time = _t.time() - _step_start
+    
+    # 記錄情緒到當日日誌
+    log_emotion(emotion_result)
+    print(f"🎭 [情緒辨識] {emotion_result['emotion_zh']}({emotion_result['emotion_en']}) 信心度: {emotion_result['confidence']:.2%}")
     
     if not user_text or not user_text.strip():
         user_text = "（長輩發出了聲音，但語音識別未偵測到清晰文字）"
@@ -288,12 +304,13 @@ async def handle_elder_speech(
 
     # 3. 組合 prompt
     _step_start = _t.time()
-    history_ctx = dm.get_history_summary_text()
+    elder_dm = DataManager(elder_id=elder_id)
+    history_ctx = elder_dm.get_history_summary_text()
     full_prompt = f"{history_ctx}長者最新說的話：{user_text}"
     print(f"⏱️ [步驟3] 組合 prompt：{_t.time() - _step_start:.3f}s（歷史 {len(history_ctx)} 字）")
 
     # 4. SSE 串流回應
-    async def _post_chat_tasks(u_text: str, ai_text: str, eid: str):
+    async def _post_chat_tasks(u_text: str, ai_text: str, eid: str, emotion: dict = None):
         """
         與聊天無關的後處理任務，在獨立背景 task 中執行。
         """
@@ -303,7 +320,7 @@ async def handle_elder_speech(
         # 1. 寫入短期記憶 + 看板時間軸 + 互動計數
         _s = _bt.time()
         try:
-            dm.record_full_interaction(u_text, ai_text)
+            elder_dm.record_full_interaction(u_text, ai_text)
         except Exception as e:
             print(f"⚠️ [背景] record_full_interaction 失敗: {e}")
         print(f"⏱️ [背景1] 記憶寫入：{_bt.time() - _s:.2f}s")
@@ -317,7 +334,7 @@ async def handle_elder_speech(
             print(f"⚠️ [背景] memory.update_memories 失敗: {e}")
         print(f"⏱️ [背景2] 健康分析：{_bt.time() - _s:.2f}s")
 
-        # 3. AI 摘要分析 → 更新看板今日摘要
+        # 3. AI 摘要分析 → 更新看板今日摘要（含情緒資訊）
         _s = _bt.time()
         try:
             ai_result = services.ai_summary.get_elder_daily_summary(
@@ -330,11 +347,27 @@ async def handle_elder_speech(
                 metrics["diet"] = structured["diet"]
             if structured.get("sleep"):
                 metrics["sleep"] = structured["sleep"]
+            
+            # 寫入情緒資訊到 metrics
+            if emotion and emotion.get("confidence", 0) > 0:
+                emotion_summary = get_emotion_summary()
+                metrics["emotion"] = emotion_summary.get("dominant_emotion_zh", "中立")
+                metrics["latest_emotion"] = emotion.get("emotion_zh", "中立")
+                metrics["emotion_confidence"] = emotion.get("confidence", 0.0)
+                metrics["emotion_timeline"] = emotion_summary.get("emotion_timeline", "")
+            
             if summary_text:
-                dm.update_today_summary(summary_text, metrics)
+                elder_dm.update_today_summary(summary_text, metrics)
         except Exception as e:
             print(f"⚠️ [背景] AI 摘要失敗: {e}")
         print(f"⏱️ [背景3] AI 摘要：{_bt.time() - _s:.2f}s")
+
+        # 3.5 更新環境提示詞中的情緒區塊
+        if emotion and emotion.get("confidence", 0) > 0:
+            try:
+                update_emotion_in_prompt()
+            except Exception as e:
+                print(f"⚠️ [背景] 情緒提示詞更新失敗: {e}")
 
         # 4. 廣播給 Dashboard（SSE push）
         try:
@@ -343,6 +376,7 @@ async def handle_elder_speech(
                 "elder_id": eid,
                 "user_text": u_text,
                 "ai_reply": ai_text,
+                "emotion": emotion.get("emotion_zh", "中立") if emotion else "中立",
                 "summary_updated": True,
             })
         except Exception as e:
@@ -417,7 +451,7 @@ async def handle_elder_speech(
 
         # 5. 交由獨立背景 task 處理（記憶寫入、AI摘要、Dashboard廣播）
         #    完全不阻塞串流，聊天對話已結束，後台慢慢跑
-        asyncio.ensure_future(_post_chat_tasks(user_text, full_reply, elder_id))
+        asyncio.ensure_future(_post_chat_tasks(user_text, full_reply, elder_id, emotion_result))
 
     return StreamingResponse(
         generate_stream(),
@@ -439,29 +473,32 @@ class ElderProfileRequest(BaseModel):
     nickname: str
     age: Optional[int] = None
     location: str
-    primary_language: str
+    primary_language: str = "中文"
+    gender: str = ""
     health_status: List[str] = []
-    care_notes: str
+    care_notes: str = ""
 
 @app.post("/api/elder/profile")
 def save_elder_profile(req: ElderProfileRequest):
     try:
-        dm.update_profile(
+        # 為該長者建立專屬 DataManager（會自動建立資料目錄）
+        elder_dm = DataManager(elder_id=req.elder_id)
+        elder_dm.update_profile(
             name=req.name,
             nickname=req.nickname,
             age=req.age,
             location=req.location,
+            gender=req.gender,
         )
-        dm.update_care_baseline(
+        elder_dm.update_care_baseline(
             chronic_diseases=req.health_status,
             core_emotional_need=req.care_notes,
         )
         # 更新語言設定
-        from core.data_manager import PROFILE_PATH
-        profile = dm.get_profile()
+        profile = elder_dm.get_profile()
         profile["localization_settings"]["primary_language"] = req.primary_language
         profile["meta"]["last_updated"] = datetime.now().isoformat()
-        dm._save(PROFILE_PATH, profile)
+        elder_dm._save(elder_dm.profile_path, profile)
 
         return {"success": True, "message": f"✅ 長者 {req.name} 基本資料已儲存！"}
     except Exception as e:
@@ -482,7 +519,8 @@ class TimelineEventRequest(BaseModel):
 @app.post("/api/elder/timeline")
 def add_timeline_event(req: TimelineEventRequest):
     try:
-        dm.add_timeline_event(
+        elder_dm = DataManager(elder_id=req.elder_id)
+        elder_dm.add_timeline_event(
             event_type=req.event_type,
             title=req.title,
             description=req.content,
@@ -503,6 +541,7 @@ class ConversationRequest(BaseModel):
 @app.post("/api/elder/ai-summary")
 def generate_ai_summary(req: ConversationRequest):
     try:
+        elder_dm = DataManager(elder_id=req.elder_id)
         ai_result = services.ai_summary.get_elder_daily_summary(
             current_chat=req.conversation_text
         )
@@ -517,12 +556,12 @@ def generate_ai_summary(req: ConversationRequest):
             metrics["sleep"] = structured["sleep"]
         if structured.get("medication"):
             metrics["medication_taken"] = True
-        dm.update_today_summary(summary_text, metrics)
+        elder_dm.update_today_summary(summary_text, metrics)
 
         # timeline 事件
         if "timeline" in ai_result:
             for event in ai_result["timeline"]:
-                dm.add_timeline_event(
+                elder_dm.add_timeline_event(
                     event_type=event.get("type", "interaction"),
                     title=event.get("title", "AI 分析事件"),
                     description=event.get("content", ""),
@@ -641,13 +680,21 @@ def voice_stop():
 # 靜態檔案與頁面路由
 # ═══════════════════════════════════════════════════════
 
-# 串流音訊暫存檔路由
+# 串流音訊暫存檔路由（下載後自動刪除）
 @app.get("/_stream_audio_{index}.mp3")
 async def get_stream_audio(index: int):
-    """供前端逐句播放時下載串流音訊暫存檔"""
+    """供前端逐句播放時下載串流音訊暫存檔，下載完成後自動刪除"""
     file_path = os.path.join(config.BASE_DIR, f"_stream_audio_{index}.mp3")
     if os.path.exists(file_path):
-        return FileResponse(file_path, media_type="audio/mpeg")
+        from fastapi.responses import Response
+        with open(file_path, "rb") as f:
+            audio_bytes = f.read()
+        # 讀取後立即刪除暫存檔
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
+        return Response(content=audio_bytes, media_type="audio/mpeg")
     raise HTTPException(status_code=404, detail="音訊檔案不存在")
 
 # 圖片資源

@@ -74,7 +74,7 @@
   <!-- 分頁按鈕 -->
   <div class="flex gap-2 flex-wrap">
     <button class="tab-btn active text-sm font-bold px-4 py-2 rounded-xl" onclick="switchTab('profile', this)">📋 基本資料</button>
-    <button class="tab-btn text-sm font-bold px-4 py-2 rounded-xl" onclick="switchTab('ai', this)">🤖 AI 摘要</button>
+    <button class="tab-btn text-sm font-bold px-4 py-2 rounded-xl" onclick="switchTab('ai', this)">📝 照護觀察</button>
     <button class="tab-btn text-sm font-bold px-4 py-2 rounded-xl" onclick="switchTab('timeline', this)">⏱️ 時間軸事件</button>
   </div>
 
@@ -86,21 +86,27 @@
       <div><label>暱稱</label><input id="p_nickname" type="text" placeholder="阿香婆婆"/></div>
       <div><label>年齡</label><input id="p_age" type="number" placeholder="74"/></div>
       <div><label>居住地</label><input id="p_location" type="text" placeholder="苗栗縣大湖鄉"/></div>
-      <div><label>主要語言</label><input id="p_language" type="text" placeholder="客家話（四縣腔）"/></div>
+      <div><label>性別</label>
+        <select id="p_gender">
+          <option value="">請選擇</option>
+          <option value="male">男（阿公/爺爺）</option>
+          <option value="female">女（阿嬤/奶奶）</option>
+        </select>
+      </div>
       <div><label>慢性疾病（逗號分隔）</label><input id="p_health" type="text" placeholder="輕微高血壓,退化性膝關節炎"/></div>
     </div>
     <div><label>照護備註</label><textarea id="p_notes" rows="3" placeholder="長期獨居容易感到寂寞焦慮..."></textarea></div>
     <button class="btn-primary w-full sm:w-auto" onclick="saveProfile()">💾 儲存基本資料</button>
   </div>
 
-  <!-- ── Tab 2：AI 摘要 ── -->
+  <!-- ── Tab 2：照護觀察記錄 ── -->
   <div id="tab-ai" class="card p-5 space-y-4 hidden">
-    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">輸入對話紀錄 → 觸發 AI 摘要分析</h2>
-    <p class="text-xs text-slate-500">將今日與長者的對話紀錄貼入下方，AI 將自動分析並寫入資料庫。</p>
-    <div><label>對話紀錄全文</label>
-      <textarea id="ai_text" rows="10" placeholder="請貼上今日對話內容&#10;&#10;例如：&#10;系統：阿香婆婆今天好嗎？&#10;婆婆：好啊，今天去菜園拔草..."></textarea>
+    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">照護觀察記錄</h2>
+    <p class="text-xs text-slate-500">輸入今日觀察到的長者狀況（飲食、活動、情緒、身體等），系統會交由 AI 分析並更新今日摘要。</p>
+    <div><label>今日觀察內容</label>
+      <textarea id="ai_text" rows="6" placeholder="例如：&#10;今天早上胃口不太好，只吃了半碗粥&#10;下午有去菜園走動，精神看起來不錯&#10;晚上說膝蓋有點痠"></textarea>
     </div>
-    <button class="btn-primary w-full sm:w-auto" id="aiBtn" onclick="runAiSummary()">🤖 開始 AI 分析並寫入</button>
+    <button class="btn-primary w-full sm:w-auto" id="aiBtn" onclick="runAiSummary()">送出並更新摘要</button>
     <div id="ai_result" class="hidden rounded-xl bg-slate-900 border border-slate-700 p-4 text-sm text-slate-300 leading-relaxed whitespace-pre-wrap"></div>
   </div>
 
@@ -195,7 +201,8 @@ async function saveProfile() {
       nickname:         document.getElementById('p_nickname').value,
       age:              parseInt(document.getElementById('p_age').value) || null,
       location:         document.getElementById('p_location').value,
-      primary_language: document.getElementById('p_language').value,
+      primary_language: '中文',
+      gender:           document.getElementById('p_gender').value,
       health_status:    health,
       care_notes:       document.getElementById('p_notes').value,
     });
@@ -208,7 +215,7 @@ async function saveProfile() {
 // ── AI 摘要分析 ──────────────────────────
 async function runAiSummary() {
   const text = document.getElementById('ai_text').value.trim();
-  if (!text) return showToast('❌ 請先輸入對話紀錄', 'error');
+  if (!text) return showToast('❌ 請先輸入觀察內容', 'error');
 
   const btn = document.getElementById('aiBtn');
   btn.disabled = true;
@@ -218,17 +225,18 @@ async function runAiSummary() {
   try {
     const data = await apiPost('/api/elder/ai-summary', {
       elder_id: ELDER_ID,
-      conversation_text: text,
+      conversation_text: `照護者今日觀察記錄：\n${text}`,
     });
     showToast(data.message, 'success');
     const box = document.getElementById('ai_result');
-    box.textContent = JSON.stringify(data.summary, null, 2);
+    const summary = data.summary || {};
+    box.textContent = `【今日摘要】\n${summary.overallSummary || ''}\n\n【結構化資料】\n${JSON.stringify(summary.structuredData || {}, null, 2)}`;
     box.classList.remove('hidden');
   } catch (e) {
     showToast('❌ ' + e.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = '🤖 開始 AI 分析並寫入';
+    btn.textContent = '送出並更新摘要';
   }
 }
 

@@ -32,6 +32,7 @@ if _project_dir not in sys.path:
 # ── 引入專案內模組 ────────────────────────────────────
 from speech.wake_word import WakeWordDetector
 from core.memory_controller import MemoryController
+import config
 
 # 🎯 引入語音辨識 + TTS 模組
 from speech.asr_tts import (
@@ -39,6 +40,13 @@ from speech.asr_tts import (
     text_to_speech_and_play, 
     stream_speak,
     synthesize_and_play_sentence,
+)
+
+# 🎭 引入語音情緒辨識模組
+from speech.emotion_recognition import (
+    recognize_emotion_from_array,
+    log_emotion,
+    get_emotion_summary,
 )
 
 # 🎯 引入串流逐句 LLM 生成器
@@ -133,6 +141,15 @@ class VoiceAssistant:
                         break
                     self._speak(SILENT_MSG)
                     continue
+
+                # 3.5 語音情緒辨識（與 ASR 同音訊，不需重複錄音）
+                try:
+                    emotion_result = recognize_emotion_from_array(audio, SAMPLE_RATE)
+                    log_emotion(emotion_result)
+                    print(f"[情緒] {emotion_result['emotion_zh']}({emotion_result['emotion_en']}) "
+                          f"信心度: {emotion_result['confidence']:.2%}")
+                except Exception as emo_err:
+                    print(f"[情緒] 辨識失敗：{emo_err}")
 
                 print(f"[使用者] {user_text}")
 
@@ -229,7 +246,7 @@ class VoiceAssistant:
 
             current_prompt = get_combined_system_prompt()
             response = chat(
-                model="gemma2",
+                model=config.OLLAMA_MODEL,
                 messages=[
                     {"role": "system", "content": current_prompt},
                     {"role": "user",   "content": prompt},

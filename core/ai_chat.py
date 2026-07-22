@@ -18,43 +18,75 @@ system_prompt = base_system_prompt
 
 def get_combined_system_prompt():
     """
-    動態讀取最新 6 小時更新的天氣提示詞，並與原本的 system_prompt 結合
+    動態組合完整的 system prompt：
+    基礎人設 + 當前時間 + 天氣環境 + 情緒狀態
     """
+    from datetime import datetime
+    
+    # 天氣與情緒環境提示詞
     weather_prompt = ""
     if os.path.exists(config.ENVIRONMENTAL_PROMPTS_PATH):
         with open(config.ENVIRONMENTAL_PROMPTS_PATH, 'r', encoding='utf-8') as f:
             weather_prompt = f.read()
-    else:
-        print("\n[警告] 找不到 Environmental_Prompts.txt，請確認 weather_cron.py 是否正在運行。")
     
-    # 將原本的 system_prompt 與天氣提示詞組裝在一起
-    combined_prompt = f"{base_system_prompt}\n\n" \
-                      f"=========================================\n" \
-                      f"【以下為即時串接的外部環境資訊（每6小時自動更新）】\n" \
-                      f"{weather_prompt}\n" \
-                      f"========================================="
+    # 當前時間情境
+    now = datetime.now()
+    hour = now.hour
+    if hour < 6:
+        time_context = "現在是凌晨，長輩可能睡不著或剛醒來"
+    elif hour < 9:
+        time_context = "現在是早上，長輩可能剛起床"
+    elif hour < 12:
+        time_context = "現在是上午"
+    elif hour < 14:
+        time_context = "現在是中午，可能剛吃完飯或準備吃飯"
+    elif hour < 17:
+        time_context = "現在是下午"
+    elif hour < 19:
+        time_context = "現在是傍晚，接近晚餐時間"
+    elif hour < 22:
+        time_context = "現在是晚上"
+    else:
+        time_context = "現在是深夜，長輩應該要準備休息了"
+    
+    combined_prompt = (
+        f"{base_system_prompt}\n\n"
+        f"=========================================\n"
+        f"【當前時間】{now.strftime('%Y-%m-%d %H:%M')}（{time_context}）\n"
+        f"=========================================\n"
+        f"【以下為即時環境資訊】\n"
+        f"{weather_prompt}\n"
+        f"========================================="
+    )
     return combined_prompt
 
 def ask_ollama(text):
     # 每次對話時都重新抓取最新的組合提示詞
     current_system_prompt = get_combined_system_prompt()
     
+    import re
+    _emoji_re = re.compile(
+        r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF'
+        r'\U0001F1E0-\U0001F1FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FAFF'
+        r'\U00002702-\U000027B0\U00002600-\U000026FF\U0000FE0F\U0000200D\U000020E3]+'
+    )
+    
     response = chat(
-        model='gemma2',
+        model=config.OLLAMA_MODEL,
         messages=[
             {"role": "system", "content": current_system_prompt},
             {'role': 'user', 'content': text}
         ],
         stream=False,
     )
-    return response['message']['content']
+    return _emoji_re.sub('', response['message']['content'])
 
 def ask_ollama_stream(text):
     # 串流模式也同步動態更新
     current_system_prompt = get_combined_system_prompt()
     
     stream = chat(
-        model='gemma2',
+        model=config.OLLAMA_MODEL,
         messages=[
             {"role": "system", "content": current_system_prompt},
             {'role': 'user', 'content': text}
@@ -65,7 +97,7 @@ def ask_ollama_stream(text):
         print(chunk['message']['content'], end='', flush=True)
 
 
-def ask_ollama_stream_sentences(text, model='gemma2'):
+def ask_ollama_stream_sentences(text, model=None):
     """
     串流模式逐句生成器：LLM 每產出一個完整句子就 yield 出去。
     
@@ -76,6 +108,8 @@ def ask_ollama_stream_sentences(text, model='gemma2'):
         for sentence in ask_ollama_stream_sentences("你好"):
             tts_speak(sentence)
     """
+    if model is None:
+        model = config.OLLAMA_MODEL
     current_system_prompt = get_combined_system_prompt()
     
     # 句子結束符號
@@ -83,6 +117,14 @@ def ask_ollama_stream_sentences(text, model='gemma2'):
     # 逗號等也可以作為較長片段的斷點（超過一定長度時）
     SOFT_BREAKS = {'，', '、', '；', ',', ';', '：', ':'}
     MAX_SOFT_BREAK_LEN = 30  # 超過此長度遇到軟斷點也切句
+    
+    # emoji 過濾
+    import re
+    _emoji_re = re.compile(
+        r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF'
+        r'\U0001F1E0-\U0001F1FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FAFF'
+        r'\U00002702-\U000027B0\U00002600-\U000026FF\U0000FE0F\U0000200D\U000020E3]+'
+    )
     
     stream = chat(
         model=model,
@@ -97,6 +139,7 @@ def ask_ollama_stream_sentences(text, model='gemma2'):
     
     for chunk in stream:
         token = chunk['message']['content']
+        token = _emoji_re.sub('', token)  # 過濾 emoji
         buffer += token
         
         # 檢查是否有完整句子可以切出
