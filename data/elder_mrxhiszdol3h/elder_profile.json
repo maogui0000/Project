@@ -1,16 +1,16 @@
 {
-  "elder_id": "elder_mrw64yy70lbt",
+  "elder_id": "elder_mrxhiszdol3h",
   "meta": {
-    "created_at": "2026-07-22T22:19:20.572766",
-    "last_updated": "2026-07-22T22:19:20.575936"
+    "created_at": "2026-07-23T20:25:47.785421",
+    "last_updated": "2026-07-23T20:25:47.788651"
   },
   "personal_info": {
-    "name": "洪韡儀",
-    "nickname": "鮪魚",
+    "name": "0",
+    "nickname": "0",
     "gender": "female",
-    "age": 88,
+    "age": null,
     "birth_year": null,
-    "location": "宜蘭市"
+    "location": "0"
   },
   "localization_settings": {
     "primary_language": "中文",
@@ -19,10 +19,8 @@
     "persona_relation": "貼心孝順的晚輩"
   },
   "care_baseline": {
-    "chronic_diseases": [
-      "糖尿病"
-    ],
+    "chronic_diseases": [],
     "emergency_contact": "",
-    "core_emotional_need": "獨居"
+    "core_emotional_need": ""
   }
 }

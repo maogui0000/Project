@@ -87,7 +87,7 @@ class DataManager:
                 "meta": {"created_at": datetime.now().isoformat(), "last_updated": datetime.now().isoformat()},
                 "personal_info": {"name": "長輩", "nickname": "", "gender": "", "age": None, "birth_year": None, "location": ""},
                 "localization_settings": {"primary_language": "中文", "secondary_language": "", "tts_accent": "台灣國語腔調", "persona_relation": "貼心孝順的晚輩"},
-                "care_baseline": {"chronic_diseases": [], "emergency_contact": "", "core_emotional_need": ""}
+                "care_baseline": {"diseases": [], "emergency_contact": "", "core_emotional_need": ""}
             },
             self.long_term_path: {
                 "elder_id": self.elder_id,

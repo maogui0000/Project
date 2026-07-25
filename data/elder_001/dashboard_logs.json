@@ -1,6 +1,6 @@
 {
   "elder_id": "elder_001",
-  "report_date": "2026-07-22",
+  "report_date": "2026-07-23",
   "line_notification_status": {
     "trigger_time": "19:00:00",
     "is_sent": false
@@ -11,7 +11,7 @@
       "diet": "null",
       "sleep": "尚未記錄",
       "medication_taken": false,
-      "medication_time": "null"
+      "medication_time": null
     }
   },
   "interaction_stats": {
@@ -49,46 +49,16 @@
   },
   "timeline_events": [
     {
-      "time": "2026-07-22T22:22:15.155654",
+      "time": "2026-07-23T20:30:05.841239",
       "type": "health",
       "title": "健康警訊：null",
       "description": "長者提及身體不適：null"
     },
     {
-      "time": "2026-07-22T22:22:15.152603",
+      "time": "2026-07-23T20:29:33.384998",
       "type": "health",
-      "title": "用藥紀錄：null（未服藥）",
-      "description": "長者提及 null，狀態：未服藥，時間：null"
-    },
-    {
-      "time": "2026-07-22T22:21:11.630370",
-      "type": "health",
-      "title": "健康警訊：沒有提到身體不適",
-      "description": "長者提及身體不適：沒有提到身體不適"
-    },
-    {
-      "time": "2026-07-22T22:21:11.627421",
-      "type": "health",
-      "title": "用藥紀錄：藥物（未服藥）",
-      "description": "長者提及 藥物，狀態：未服藥，時間：2026-07-22 22:21:10"
-    },
-    {
-      "time": "2026-07-22T22:18:55.115495",
-      "type": "health",
-      "title": "用藥紀錄：藥物（未服藥）",
-      "description": "長者提及 藥物，狀態：未服藥，時間：2026-07-22 22:18:54"
-    },
-    {
-      "time": "2026-07-22T22:18:31.462976",
-      "type": "health",
-      "title": "健康警訊：膝骨頭酸痛",
-      "description": "長者提及身體不適：膝骨頭酸痛"
-    },
-    {
-      "time": "2026-07-22T22:18:31.459947",
-      "type": "health",
-      "title": "用藥紀錄：藥物（未服藥）",
-      "description": "長者提及 藥物，狀態：未服藥，時間：2026-07-22 22:18:30"
+      "title": "健康警訊：蕩蕩",
+      "description": "長者提及身體不適：蕩蕩"
     }
   ]
 }

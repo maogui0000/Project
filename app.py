@@ -511,7 +511,7 @@ def save_elder_profile(req: ElderProfileRequest):
             gender=req.gender,
         )
         elder_dm.update_care_baseline(
-            chronic_diseases=req.health_status,
+            diseases=req.health_status,
             core_emotional_need=req.care_notes,
         )
         # 更新語言設定

@@ -1,0 +1,64 @@
+{
+  "elder_id": "elder_mrxhklnjcjza",
+  "report_date": "2026-07-23",
+  "line_notification_status": {
+    "trigger_time": "19:00:00",
+    "is_sent": false
+  },
+  "today_summary": {
+    "text": "長者今天感覺有點疲倦，但並未提及任何特別的活動或情緒變化。",
+    "metrics": {
+      "diet": "對話中未提及飲食狀況",
+      "sleep": "對話中未提及睡眠狀況，",
+      "medication_taken": false,
+      "medication_time": null
+    }
+  },
+  "interaction_stats": {
+    "total_turns": 2,
+    "weekly_trend": [
+      {
+        "day": "週一",
+        "count": 0
+      },
+      {
+        "day": "週二",
+        "count": 0
+      },
+      {
+        "day": "週三",
+        "count": 0
+      },
+      {
+        "day": "週四",
+        "count": 2
+      },
+      {
+        "day": "週五",
+        "count": 0
+      },
+      {
+        "day": "週六",
+        "count": 0
+      },
+      {
+        "day": "週日",
+        "count": 0
+      }
+    ]
+  },
+  "timeline_events": [
+    {
+      "time": "2026-07-23T20:30:04.961248",
+      "type": "interaction",
+      "title": "智慧語音關懷",
+      "description": "長者說：可能要到那個就是學長的那個電腦上可能反而要吃網路\nAI回覆：喔，學長那邊電腦？你要先去確認一下網路狀況， 然後再考慮怎麼做。"
+    },
+    {
+      "time": "2026-07-23T20:29:32.475572",
+      "type": "interaction",
+      "title": "智慧語音關懷",
+      "description": "長者說：她感覺有點蕩蕩的。\nAI回覆：「嗯，你今天感覺有點好嗎？要不要喝杯水或熱茶來溫暖一下？」"
+    }
+  ]
+}

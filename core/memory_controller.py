@@ -102,9 +102,27 @@ class MemoryController:
             symptom_text = analysis["symptom"]
             self.dm.add_timeline_event(
                 event_type="health",
-                title=f"健康警訊：{symptom_text}",
-                description=f"長者提及身體不適：{symptom_text}"
+                title=f"健康紀錄：{symptom_text}",
+                description=f"長者提及身體狀況：{symptom_text}"
             )
+            is_long_term_updated = True
+
+        # 疾病偵測 → 自動加入 care_baseline.diseases
+        has_chronic = analysis.get("chronic_disease") is not None
+        if has_chronic:
+            disease_name = analysis["chronic_disease"]
+            # 讀取現有的疾病列表，避免重複加入
+            profile = self.dm.get_profile()
+            existing = profile.get("care_baseline", {}).get("diseases", [])
+            if disease_name not in existing:
+                existing.append(disease_name)
+                self.dm.update_care_baseline(diseases=existing)
+                self.dm.add_timeline_event(
+                    event_type="health",
+                    title=f"新增病史：{disease_name}",
+                    description=f"長者對話中提及患有{disease_name}，已自動記錄至病史"
+                )
+                print(f"⚙️ [記憶控制] 偵測到疾病「{disease_name}」，已加入病史。")
             is_long_term_updated = True
 
         if is_long_term_updated:
@@ -115,7 +133,7 @@ class MemoryController:
     def _analyze_health_info(self, user_text: str, current_time_str: str) -> dict:
         """用 AI 分析長者的話中是否包含健康資訊"""
         if ask_ollama is None:
-            return {"medication": {"status": "未提及", "name": None, "time": None}, "diet": None, "symptom": None}
+            return {"medication": {"status": "未提及", "name": None, "time": None}, "diet": None, "symptom": None, "chronic_disease": None}
 
         analysis_prompt = f"""
         你是一位高齡照護分析師。
@@ -132,7 +150,8 @@ class MemoryController:
                 "time": "精準的吃藥時間（格式：2026-07-20 22:15:00），若無法推算或未提及則填 null"
             }},
             "diet": "提及的食物，若無則填 null",
-            "symptom": "身體不適症狀，若無則填 null"
+            "symptom": "身體不適症狀，若無則填 null",
+            "chronic_disease": "提及的慢性疾病名稱（如高血壓、糖尿病、關節炎等），若無則填 null"
         }}
         """
 
@@ -141,7 +160,7 @@ class MemoryController:
             clean_response = raw_response.replace("```json", "").replace("```", "").strip()
             return json.loads(clean_response)
         except Exception:
-            return {"medication": {"status": "未提及", "name": None, "time": None}, "diet": None, "symptom": None}
+            return {"medication": {"status": "未提及", "name": None, "time": None}, "diet": None, "symptom": None, "chronic_disease": None}
 
     # ─── 相容性方法（供舊程式碼不報錯）──────────────────
 

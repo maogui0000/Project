@@ -1,16 +1,16 @@
 {
-  "elder_id": "elder_001",
+  "elder_id": "elder_mrxhklnjcjza",
   "meta": {
-    "created_at": "2026-07-23T19:54:40.324606",
-    "last_updated": "2026-07-23T19:54:40.324615"
+    "created_at": "2026-07-23T20:27:11.655596",
+    "last_updated": "2026-07-23T20:27:11.658769"
   },
   "personal_info": {
-    "name": "長輩",
-    "nickname": "",
-    "gender": "",
+    "name": "0",
+    "nickname": "0",
+    "gender": "female",
     "age": null,
     "birth_year": null,
-    "location": ""
+    "location": "0"
   },
   "localization_settings": {
     "primary_language": "中文",
