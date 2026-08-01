@@ -180,6 +180,73 @@
           </div>
         </details>
 
+        <details class="group rounded-lg border border-slate-200 overflow-hidden">
+          <summary class="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-700 px-4 py-2.5 bg-slate-50 flex items-center gap-2">
+            <span class="transition-transform group-open:rotate-90 text-[10px]">▶</span> 🔊 感官與語言偏好
+          </summary>
+          <div class="grid grid-cols-1 gap-3 p-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">聽力狀況</label>
+              <select id="reg_hearing" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+                <option value="normal">聽力良好</option>
+                <option value="weak">聽力稍弱（需較大音量或放慢語速）</option>
+              </select>
+              <p class="text-[10px] text-slate-400 mt-1">若設定為「聽力稍弱」，系統會自動放大音量並放慢語速</p>
+            </div>
+          </div>
+        </details>
+
+        <details class="group rounded-lg border border-slate-200 overflow-hidden">
+          <summary class="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-700 px-4 py-2.5 bg-slate-50 flex items-center gap-2">
+            <span class="transition-transform group-open:rotate-90 text-[10px]">▶</span> 💬 興趣與話題偏好
+          </summary>
+          <div class="p-4 space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-2">喜愛聊的話題（可多選）</label>
+              <div class="flex flex-wrap gap-2" id="interest_tags">
+                <button type="button" data-tag="過往回憶" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition" onclick="toggleTag(this)">過往回憶</button>
+                <button type="button" data-tag="戲曲" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition" onclick="toggleTag(this)">戲曲</button>
+                <button type="button" data-tag="烹飪" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition" onclick="toggleTag(this)">烹飪</button>
+                <button type="button" data-tag="寵物" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition" onclick="toggleTag(this)">寵物</button>
+                <button type="button" data-tag="日常閒聊" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition" onclick="toggleTag(this)">日常閒聊</button>
+                <button type="button" data-tag="運動健康" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition" onclick="toggleTag(this)">運動健康</button>
+                <button type="button" data-tag="家人" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition" onclick="toggleTag(this)">家人</button>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">其他興趣（自由填寫）</label>
+              <input id="reg_interests_other" type="text" placeholder="例：種花、下棋、聽廣播"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">想記住的事情 / 備忘</label>
+              <textarea id="reg_memo" rows="2" placeholder="例：孫子下禮拜要來看我、週三要去醫院回診"
+                        class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none resize-none"></textarea>
+            </div>
+          </div>
+        </details>
+
+        <details class="group rounded-lg border border-slate-200 overflow-hidden">
+          <summary class="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-700 px-4 py-2.5 bg-slate-50 flex items-center gap-2">
+            <span class="transition-transform group-open:rotate-90 text-[10px]">▶</span> 🔒 PIN 碼設定
+          </summary>
+          <div class="p-4 space-y-3">
+            <p class="text-[10px] text-slate-400">設定 4~6 位數字 PIN 碼，換裝置時驗證身分用</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">設定 PIN 碼</label>
+                <input id="reg_pin" type="password" inputmode="numeric" maxlength="6" placeholder="4~6 位數字"
+                       class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">確認 PIN 碼</label>
+                <input id="reg_pin_confirm" type="password" inputmode="numeric" maxlength="6" placeholder="再輸入一次"
+                       class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+              </div>
+            </div>
+          </div>
+        </details>
+
       </div>
     </div>
 
@@ -202,6 +269,33 @@
             class="mt-6 w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-lg transition shadow-lg">
       開始使用
     </button>
+    <p class="text-xs text-slate-400 mt-3 text-center">已有帳號？<a href="#" onclick="showPinLogin()" class="text-emerald-600 font-bold">PIN 碼登入</a></p>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     1b. PIN 碼驗證畫面 (換裝置時顯示)
+══════════════════════════════════════════ -->
+<div id="pinLoginScreen" class="hidden fixed inset-0 bg-white z-50 flex flex-col items-center justify-center px-4">
+  <div class="text-center max-w-sm w-full">
+    <div class="flex justify-center mb-6">
+      <img src="images/school_logo.png" alt="Logo" class="h-16 object-contain" onerror="this.style.display='none';">
+    </div>
+    <h2 class="text-xl font-bold text-slate-800 mb-2">歡迎回來</h2>
+    <p class="text-sm text-slate-500 mb-6">請輸入您的慣稱和 PIN 碼</p>
+    <div class="space-y-4">
+      <input id="pin_nickname" type="text" placeholder="慣稱（如：阿香婆婆）"
+             class="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+      <input id="pin_code" type="password" inputmode="numeric" maxlength="6" placeholder="PIN 碼（4~6 位數字）"
+             class="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+      <p id="pin_error" class="text-red-500 text-xs hidden"></p>
+      <button onclick="verifyPin()" 
+              class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-base transition">
+        驗證登入
+      </button>
+    </div>
+    <p class="text-xs text-slate-400 mt-6">還沒有帳號？<a href="#" onclick="showRegister()" class="text-emerald-600 font-bold">點此註冊</a></p>
   </div>
 </div>
 
@@ -272,6 +366,78 @@
 // ═══════════════════ 角色登入切換邏輯 ═══════════════════
 let currentUserId = null;  // 無預設值，必須透過註冊取得
 
+// ═══════════════════ 興趣標籤切換 ═══════════════════
+function toggleTag(btn) {
+  btn.classList.toggle('bg-emerald-100');
+  btn.classList.toggle('border-emerald-500');
+  btn.classList.toggle('text-emerald-700');
+}
+
+function getSelectedTags() {
+  const tags = [];
+  document.querySelectorAll('#interest_tags button').forEach(btn => {
+    if (btn.classList.contains('bg-emerald-100')) {
+      tags.push(btn.dataset.tag);
+    }
+  });
+  return tags;
+}
+
+// ═══════════════════ PIN 碼驗證登入 ═══════════════════
+async function verifyPin() {
+  const nickname = document.getElementById('pin_nickname').value.trim();
+  const pin = document.getElementById('pin_code').value.trim();
+  const errorEl = document.getElementById('pin_error');
+  errorEl.classList.add('hidden');
+
+  if (!nickname || !pin) {
+    errorEl.textContent = '請輸入慣稱和 PIN 碼';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/elder/verify_pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname, pin })
+    });
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      currentUserId = data.elder_id;
+      localStorage.setItem('active_elder_id', data.elder_id);
+      localStorage.setItem('elder_nickname', nickname);
+      localStorage.setItem('session_token', data.token || '');
+      // 進入主畫面
+      document.getElementById('pinLoginScreen').classList.add('hidden');
+      document.getElementById('mainApp').classList.remove('hidden');
+      document.getElementById('mainTitle').textContent = `${nickname}，今天好嗎？`;
+      initWakeWordDetection();
+    } else {
+      errorEl.textContent = data.detail || '慣稱或 PIN 碼錯誤';
+      errorEl.classList.remove('hidden');
+    }
+  } catch (e) {
+    errorEl.textContent = '驗證失敗，請稍後再試';
+    errorEl.classList.remove('hidden');
+  }
+}
+
+function showRegister() {
+  document.getElementById('pinLoginScreen').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('loginScreen').style.opacity = '1';
+}
+
+function showPinLogin() {
+  document.getElementById('loginScreen').style.opacity = '0';
+  setTimeout(() => {
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('pinLoginScreen').classList.remove('hidden');
+  }, 300);
+}
+
 async function registerAndStart() {
   // 檢查同意書
   const agreeCheckbox = document.getElementById('agreeCheckbox');
@@ -314,7 +480,29 @@ async function registerAndStart() {
     has_dementia: document.getElementById('reg_dementia').checked,
     has_wandering_history: document.getElementById('reg_wandering').checked,
     care_notes: document.getElementById('reg_notes').value.trim(),
+    // 感官偏好
+    hearing_status: document.getElementById('reg_hearing').value || 'normal',
+    // 興趣話題
+    interests: getSelectedTags(),
+    interests_other: document.getElementById('reg_interests_other').value.trim(),
+    memo: document.getElementById('reg_memo').value.trim(),
+    // PIN 碼
+    pin: document.getElementById('reg_pin').value.trim(),
   };
+
+  // PIN 碼驗證
+  const pin = formData.pin;
+  const pinConfirm = document.getElementById('reg_pin_confirm').value.trim();
+  if (pin) {
+    if (pin.length < 4 || pin.length > 6 || !/^\d+$/.test(pin)) {
+      alert('PIN 碼必須是 4~6 位數字');
+      return;
+    }
+    if (pin !== pinConfirm) {
+      alert('兩次 PIN 碼不一致');
+      return;
+    }
+  }
 
   // 送出到後端
   try {
@@ -674,6 +862,49 @@ function isNegativeResponse(text) {
   if (!text) return false;
   const noWords = ['不', '等', '晚點', '不用', '沒', '不要', '算了', '下次'];
   return noWords.some(w => text.includes(w));
+}
+
+// ═══════════════════ 主動提醒排程 ═══════════════════
+
+let _reminderInterval = null;
+
+function startReminderPolling() {
+  if (_reminderInterval) return;
+  _reminderInterval = setInterval(checkReminders, 30000); // 每 30 秒
+}
+
+function stopReminderPolling() {
+  if (_reminderInterval) { clearInterval(_reminderInterval); _reminderInterval = null; }
+}
+
+async function checkReminders() {
+  if (!currentUserId || isSessionActive || _messageFlowActive) return;
+  try {
+    const resp = await fetch(`/api/reminders/${currentUserId}/pending`);
+    const data = await resp.json();
+    if (data.pending_count > 0) {
+      // 有待處理的提醒 → 主動播報
+      const reminder = data.reminders[0];
+      isSessionActive = true;
+      await ttsPrompt(`提醒你喔，${reminder.content}`);
+      // 標記已通知
+      await fetch(`/api/reminders/${currentUserId}/notify`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ content: reminder.content })
+      });
+      // 等待 10 秒看使用者有無回應
+      const response = await listenForShortResponse();
+      if (response && response.trim()) {
+        // 有回應 → 進入正常對話
+        startListening();
+      } else {
+        // 無回應 → 回到待機
+        isSessionActive = false;
+        initWakeWordDetection();
+      }
+    }
+  } catch(e) { console.warn('[提醒排程] 檢查失敗:', e); }
 }
 
 // ═══════════════════ 開始錄音 ═══════════════════
@@ -1185,6 +1416,7 @@ function stopAll() {
     // 進入守護模式，等待喚醒詞
     isSessionActive = false;
     initWakeWordDetection();
+    startReminderPolling();
   } else {
     // 未註冊，顯示登入畫面
     setUI('idle');

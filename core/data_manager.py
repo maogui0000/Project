@@ -809,3 +809,142 @@ class DataManager:
                 print(f"💬 [留言板] 長者回覆：「{reply_text[:30]}」")
                 return True
         return False
+
+    # ═══════════════════════════════════════════════════
+    # 8. 感官偏好 / 興趣 / PIN 碼
+    # ═══════════════════════════════════════════════════
+
+    def update_sensory_preferences(self, hearing_status: str = "normal"):
+        """更新感官偏好（聽力狀況）"""
+        profile = self.get_profile()
+        if "sensory_preferences" not in profile:
+            profile["sensory_preferences"] = {}
+        profile["sensory_preferences"]["hearing_status"] = hearing_status
+        profile["sensory_preferences"]["primary_language"] = "中文"
+        profile["meta"]["last_updated"] = datetime.now().isoformat()
+        self._save(self.profile_path, profile)
+
+    def get_sensory_preferences(self) -> dict:
+        """取得感官偏好"""
+        profile = self.get_profile()
+        return profile.get("sensory_preferences", {"hearing_status": "normal", "primary_language": "中文"})
+
+    def update_interests(self, topics: list = None, other: str = "", memo: str = ""):
+        """更新興趣與話題偏好"""
+        profile = self.get_profile()
+        if "interests" not in profile:
+            profile["interests"] = {}
+        if topics is not None:
+            profile["interests"]["topics"] = topics
+        if other:
+            profile["interests"]["other"] = other
+        if memo:
+            profile["interests"]["memo"] = memo
+        profile["meta"]["last_updated"] = datetime.now().isoformat()
+        self._save(self.profile_path, profile)
+
+        # 備忘自動寫入 reminders
+        if memo and memo.strip():
+            self.add_reminder(content=memo.strip(), requested_by="註冊備忘")
+
+    def get_interests(self) -> dict:
+        """取得興趣偏好"""
+        profile = self.get_profile()
+        return profile.get("interests", {"topics": [], "other": "", "memo": ""})
+
+    def set_pin(self, pin: str):
+        """設定 PIN 碼（sha256 hash 儲存）"""
+        import hashlib
+        pin_hash = hashlib.sha256(pin.encode()).hexdigest()
+        profile = self.get_profile()
+        profile["meta"]["pin_hash"] = pin_hash
+        profile["meta"]["pin_failed_count"] = 0
+        profile["meta"]["pin_locked_until"] = None
+        profile["meta"]["last_updated"] = datetime.now().isoformat()
+        self._save(self.profile_path, profile)
+
+    def verify_pin(self, pin: str) -> bool:
+        """驗證 PIN 碼，錯誤 5 次鎖定 15 分鐘"""
+        import hashlib
+        profile = self.get_profile()
+        meta = profile.get("meta", {})
+
+        # 檢查鎖定狀態
+        locked_until = meta.get("pin_locked_until")
+        if locked_until:
+            if datetime.now().isoformat() < locked_until:
+                return False  # 仍在鎖定中
+            else:
+                # 鎖定已過期，重置
+                meta["pin_failed_count"] = 0
+                meta["pin_locked_until"] = None
+
+        stored_hash = meta.get("pin_hash", "")
+        if not stored_hash:
+            return False
+
+        input_hash = hashlib.sha256(pin.encode()).hexdigest()
+        if input_hash == stored_hash:
+            # 驗證成功，重置計數
+            meta["pin_failed_count"] = 0
+            meta["pin_locked_until"] = None
+            self._save(self.profile_path, profile)
+            return True
+        else:
+            # 驗證失敗，累加計數
+            meta["pin_failed_count"] = meta.get("pin_failed_count", 0) + 1
+            if meta["pin_failed_count"] >= 5:
+                from datetime import timedelta
+                meta["pin_locked_until"] = (datetime.now() + timedelta(minutes=15)).isoformat()
+                print(f"🔒 [PIN] 錯誤 5 次，帳號鎖定 15 分鐘")
+            self._save(self.profile_path, profile)
+            return False
+
+    def add_reminder(self, content: str, requested_by: str = "長者"):
+        """新增提醒事項"""
+        data = self._load(self.reminders_path)
+        data["reminders"].append({
+            "content": content,
+            "requested_by": requested_by,
+            "created_at": datetime.now().isoformat(),
+            "status": "pending",
+            "notified": False,
+        })
+        self._save(self.reminders_path, data)
+
+    # ═══════════════════════════════════════════════════
+    # 9. TTL 自動清理
+    # ═══════════════════════════════════════════════════
+
+    def cleanup_expired_long_term(self):
+        """清理過期的長期記憶（importance=permanent 不清理）"""
+        data = self.get_long_term_memory()
+        now = datetime.now().isoformat()
+        original_count = len(data.get("records", []))
+        data["records"] = [
+            r for r in data.get("records", [])
+            if r.get("importance") == "permanent" or not r.get("expires_at") or r["expires_at"] > now
+        ]
+        removed = original_count - len(data["records"])
+        if removed > 0:
+            self._save(self.long_term_path, data)
+            print(f"🧹 [TTL] 清理 {removed} 筆過期長期記憶")
+
+    def cleanup_expired_dialogue(self):
+        """清理過期的短期對話記錄"""
+        data = self._load(self.short_term_path)
+        now = datetime.now().isoformat()
+        original_count = len(data.get("dialogue_history", []))
+        data["dialogue_history"] = [
+            d for d in data.get("dialogue_history", [])
+            if not d.get("expires_at") or d["expires_at"] > now
+        ]
+        removed = original_count - len(data["dialogue_history"])
+        if removed > 0:
+            self._save(self.short_term_path, data)
+            print(f"🧹 [TTL] 清理 {removed} 筆過期短期對話")
+
+    def cleanup_all_expired(self):
+        """一次性清理所有過期資料"""
+        self.cleanup_expired_long_term()
+        self.cleanup_expired_dialogue()

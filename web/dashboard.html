@@ -10,839 +10,390 @@
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
     * { font-family: 'Noto Sans TC', sans-serif; }
     body { background: #0f172a; }
-    /* 漸層背景卡片 */
-    .glass {
-      background: rgba(255,255,255,0.05);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-    .card {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 1rem;
-    }
-    /* 滾動條美化 */
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 1rem; }
+    .nav-item { transition: all 0.2s; border-radius: 0.5rem; }
+    .nav-item:hover { background: #334155; }
+    .nav-item.active { background: #065f46; color: #6ee7b7; }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #1e293b; }
     ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-
-    /* 時間軸線 */
-    .timeline-line {
-      position: absolute; left: 19px; top: 28px;
-      width: 2px; bottom: 0;
-      background: linear-gradient(to bottom, #3b82f6, transparent);
-    }
-    /* 進度條動畫 */
-    @keyframes fillBar { from{width:0} to{width:var(--w)} }
-    .bar-fill { animation: fillBar 1s ease-out forwards; }
-    /* 數字跳動 */
-    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-    .fade-up { animation: fadeUp 0.6s ease-out forwards; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+    .timeline-dot { width: 12px; height: 12px; border-radius: 50%; }
   </style>
 </head>
 <body class="min-h-screen text-slate-100">
 
-<!-- ══════════════════════════════════════════
-     頂部導覽列
-══════════════════════════════════════════ -->
-<nav class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur border-b border-slate-700/60 px-4 sm:px-6 py-3">
+<!-- Top Bar -->
+<nav class="sticky top-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-700/60 px-4 py-3">
   <div class="max-w-screen-xl mx-auto flex items-center justify-between">
     <div class="flex items-center gap-3">
-      <!-- 學校 Logo 圖片 -->
-      <img src="images/school_logo2.jpg" 
-           alt="學校 Logo" 
-           class="h-9 w-auto object-contain drop-shadow-sm"
-           onerror="this.style.display='none'; document.getElementById('navBrandIcon').classList.remove('hidden');">
-      
-      <!-- 備用純文字/AI圖標（當圖片載入失敗時自動顯示） -->
-      <div id="navBrandIcon" class="hidden w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-sm font-black">AI</div>
-      
+      <img src="images/school_logo2.jpg" alt="Logo" class="h-8 w-auto object-contain" onerror="this.style.display='none'">
       <div class="border-l border-slate-700 pl-3">
         <div class="text-sm font-bold text-white leading-none">智慧長照關懷系統</div>
-        <div class="text-xs text-slate-400 mt-1"> 照護者資訊後台</div>
+        <div class="text-xs text-slate-400 mt-0.5">照護者資訊後台</div>
       </div>
     </div>
-    <div class="flex items-center gap-2 sm:gap-4">
-      <a href="index.html" class="text-xs px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30 transition font-bold">
-        🎙️ 語音互動
-      </a>
-      <a href="admin.html" class="text-xs px-2.5 py-1 rounded-lg bg-slate-700 border border-slate-600 text-slate-300 hover:bg-slate-600 transition font-bold">
-        ⚙️ 管理
-      </a>
-      <div class="text-xs text-slate-400 hidden sm:block" id="navDate"></div>
-      <button class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-sm">👤</button>
+    <div class="flex items-center gap-3">
+      <span id="topElderName" class="text-sm text-cyan-400 font-bold"></span>
+      <a href="index.html" class="text-xs px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30 transition font-bold">🎙️ 語音互動</a>
+      <button id="hamburgerBtn" class="lg:hidden w-8 h-8 flex items-center justify-center text-slate-300" onclick="toggleSidebar()">☰</button>
     </div>
   </div>
 </nav>
 
-<!-- ══════════════════════════════════════════
-     主要內容區
-══════════════════════════════════════════ -->
-<main class="max-w-screen-xl mx-auto px-3 sm:px-6 py-5 sm:py-8">
+<!-- Layout: Sidebar + Main -->
+<div class="max-w-screen-xl mx-auto flex">
+  <!-- Sidebar Navigation -->
+  <aside id="sidebar" class="hidden lg:flex flex-col w-56 min-h-[calc(100vh-56px)] border-r border-slate-700/60 p-3 gap-1 sticky top-14">
+    <a href="#home" class="nav-item px-3 py-2.5 flex items-center gap-2 text-sm text-slate-300" data-page="home">🏠 首頁總覽</a>
+    <a href="#profile" class="nav-item px-3 py-2.5 flex items-center gap-2 text-sm text-slate-300" data-page="profile">👤 長者資料</a>
+    <a href="#summary" class="nav-item px-3 py-2.5 flex items-center gap-2 text-sm text-slate-300" data-page="summary">📋 每日摘要</a>
+    <a href="#emotion" class="nav-item px-3 py-2.5 flex items-center gap-2 text-sm text-slate-300" data-page="emotion">😊 情緒趨勢</a>
+    <a href="#stats" class="nav-item px-3 py-2.5 flex items-center gap-2 text-sm text-slate-300" data-page="stats">📊 互動統計</a>
+    <a href="#timeline" class="nav-item px-3 py-2.5 flex items-center gap-2 text-sm text-slate-300" data-page="timeline">⏱️ 事件時間軸</a>
+    <a href="#reminders" class="nav-item px-3 py-2.5 flex items-center gap-2 text-sm text-slate-300" data-page="reminders">🔔 提醒事項</a>
+    <div class="flex-1"></div>
+    <a href="#settings" class="nav-item px-3 py-2.5 flex items-center gap-2 text-sm text-slate-300" data-page="settings">⚙️ 設定</a>
+  </aside>
 
-  <!-- PC: 三欄 / Mobile: 單欄 -->
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
-
-    <!-- ══════════════════════
-         左欄：個人資料 (3/12)
-    ══════════════════════ -->
-    <div class="lg:col-span-3 flex flex-col gap-4">
-
-      <!-- 長輩基本資料卡 -->
-      <div class="card p-5">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="relative">
-            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-3xl shadow-lg" id="elderEmoji">👤</div>
-          </div>
-          <div>
-            <div class="text-lg font-black text-white" id="elderName"></div>
-            <div class="text-sm text-cyan-400 font-medium" id="elderNickname"></div>
-            
-            
-            <div class="text-xs text-slate-500 mt-0.5" id="elderId"></div>
-          </div>
-        </div>
-        <div class="space-y-2 text-xs sm:text-sm">
-          <div class="flex gap-2">
-            <span class="text-slate-400 w-16 shrink-0">🎂 年齡</span>
-            <span class="text-slate-200" id="elderAge"></span>
-          </div>
-          <div class="flex gap-2">
-            <span class="text-slate-400 w-16 shrink-0">📍 地點</span>
-            <span class="text-slate-200" id="elderLocation"></span>
-          </div>
-          <div class="flex gap-2">
-            <span class="text-slate-400 w-16 shrink-0">🗣️ 語言</span>
-            <span class="text-slate-200" id="elderLang"></span>
-          </div>
-          <div class="flex gap-2 items-start">
-            <span class="text-slate-400 w-16 shrink-0 pt-0.5">🩺 病史</span>
-            <div class="flex flex-wrap gap-1" id="elderHealth"></div>
-          </div>
-        </div>
-        <div class="mt-4 pt-4 border-t border-slate-700 text-xs text-slate-400 leading-relaxed" id="elderNotes"></div>
-      </div>
-      
-      <!-- 💡 新增：AI 警語免責宣告卡片 -->
-      <div class="card p-4 bg-slate-800/40 border-slate-700/60">
-        <div class="flex items-center gap-1.5 text-xs font-bold text-amber-400 mb-2">
-          <span>⚠️</span> 系統使用須知與免責宣告
-        </div>
-        <div class="text-[11px] text-slate-400 leading-relaxed space-y-1.5">
-          <p><strong class="text-slate-300">1. 非醫療診斷：</strong>本系統生成之日常摘要僅供陪伴與健康參考，不具備醫療診斷功效。身體不適請務必就醫。</p>
-          <p><strong class="text-slate-300">2. 隱私保護：</strong>語音及對話採加密傳輸儲存，系統不蒐集身分證字號、病歷號等敏感個資。</p>
-          <p><strong class="text-slate-300">3. AI 限制：</strong>日常摘要基於生成式 AI 技術，內容可能包含非絕對精確之資訊（幻覺），實際狀況請以照護人員親自確認為準。</p>
-        </div>
-      </div>
-      
-    </div><!-- end 左欄 -->
-
-    <!-- ══════════════════════
-         中欄：AI 摘要 (5/12)
-    ══════════════════════ -->
-    <div class="lg:col-span-5 flex flex-col gap-4">
-
-      <!-- 心情趨勢圖 -->
-      <div class="card p-5" id="emotionTrendSection">
-        <div class="flex items-center gap-2 mb-3">
-          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">🎭 心情趨勢</h3>
-        </div>
-        <div class="h-32"><canvas id="emotionTrendChart" style="display:none;"></canvas></div>
-        <p class="text-xs text-slate-500 text-center py-4" id="emotionTrendEmpty">尚無情緒資料，開始對話後將記錄心情變化</p>
-      </div>
-
-      <!-- AI 日報摘要卡 -->
-      <div class="card p-5 bg-gradient-to-br from-slate-800 to-slate-900 relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full -translate-y-8 translate-x-8"></div>
-        <div class="flex items-center gap-2 mb-3">
-          <div class="px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-bold">✨ AI 日報摘要</div>
-          <div class="text-xs text-slate-400 ml-auto" id="summaryDate"></div>
-        </div>
-        <p class="text-sm sm:text-base text-slate-200 leading-relaxed fade-up" id="overallSummary"></p>
-      </div>
-
-      <!-- 結構化日常記錄 -->
-      <div class="card p-5">
-        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">今日日常記錄</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="structuredData"></div>
-      </div>
-
-      <!-- 本週互動統計 + 長條圖 -->
-      <div class="card p-5">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">本週 AI 互動次數</h3>
-          <div class="text-right">
-            <span class="text-2xl font-black text-cyan-400" id="weeklyTotal"></span>
-            <span class="text-xs text-slate-400 ml-1">次 / 週</span>
-          </div>
-        </div>
-        <div class="h-40">
-          <canvas id="interactionChart"></canvas>
-        </div>
-      </div>
-
-    </div><!-- end 中欄 -->
-
-    <!-- ══════════════════════
-         右欄：時間軸 (4/12)
-    ══════════════════════ -->
-    <div class="lg:col-span-4 flex flex-col gap-4">
-
-      <!-- 今日事件時間軸 -->
-      <div class="card p-5 flex-1">
-        <div class="flex items-center gap-2 mb-3">
-          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">今日事件時間軸</h3>
-          <span class="ml-auto text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30" id="timelineDate"></span>
-        </div>
-        <!-- 篩選欄 -->
-        <div class="flex flex-wrap gap-1.5 mb-4">
-          <button onclick="filterTimeline('all')" class="tl-filter active text-[11px] px-2.5 py-1 rounded-full bg-slate-600 text-white font-bold border border-slate-500">全部</button>
-          <button onclick="filterTimeline('interaction')" class="tl-filter text-[11px] px-2.5 py-1 rounded-full bg-slate-700/50 text-slate-400 font-bold border border-slate-600/50 hover:text-white">💬 對話</button>
-          <button onclick="filterTimeline('health')" class="tl-filter text-[11px] px-2.5 py-1 rounded-full bg-slate-700/50 text-slate-400 font-bold border border-slate-600/50 hover:text-white">🏥 健康</button>
-          <button onclick="filterTimeline('activity')" class="tl-filter text-[11px] px-2.5 py-1 rounded-full bg-slate-700/50 text-slate-400 font-bold border border-slate-600/50 hover:text-white">🚶 活動</button>
-        </div>
-        <div class="relative overflow-y-auto max-h-[500px]" id="timeline"></div>
-      </div>
-
-      <!-- 狀態總覽 mini 卡 -->
-      <div class="grid grid-cols-3 gap-3" id="miniStats"></div>
-
-    </div><!-- end 右欄 -->
-
-  </div><!-- end grid -->
-</main>
-
-<!-- 頁腳 -->
-<footer class="text-center text-xs text-slate-600 py-6">
-  智慧長照關懷系統 Module C &nbsp;|&nbsp; AWS Hackathon Demo 2026
-</footer>
+  <!-- Main Content -->
+  <main id="mainContent" class="flex-1 p-4 sm:p-6 min-h-[calc(100vh-56px)]">
+    <div id="pageContainer" class="fade-in"></div>
+  </main>
+</div>
 
 <script>
-// ══════════════════════════════════════════
-//  後端 API 位址
-// ══════════════════════════════════════════
-const API_BASE = '';
+// ═══════════════════════════════════════════════════════
+// 全域狀態
+// ═══════════════════════════════════════════════════════
+let elderData = null;
+const elderId = localStorage.getItem('active_elder_id') || 'elder_178546685908e66b';
+const elderToken = localStorage.getItem('session_token') || '';
 
-// ══════════════════════════════════════════
-//  備用假資料（API 連不上時自動使用）
-// ══════════════════════════════════════════
-const FALLBACK_DATA = {
-  "elder_id": "",
-  "personal_info": {
-    "name": "尚未註冊",
-    "nickname": "",
-    "age": null,
-    "location": ""
-  },
-  "localization_settings": {
-    "primary_language": "中文"
-  },
-  "care_baseline": {
-    "chronic_diseases": [],
-    "core_emotional_need": ""
-  },
-  "medication_tracker": {
-    "prescription_name": "",
-    "compliance_rate_this_week": 0
-  },
-  "report_date": "",
-  "today_summary": {
-    "text": "系統等待中...",
-    "metrics": {
-      "diet": "尚未記錄",
-      "sleep": "尚未記錄",
-      "medication_taken": false,
-      "medication_time": null
-    }
-  },
-  "interaction_stats": {
-    "total_turns": 0,
-    "weekly_trend": [
-      {"day":"週一","count":0},{"day":"週二","count":0},{"day":"週三","count":0},
-      {"day":"週四","count":0},{"day":"週五","count":0},{"day":"週六","count":0},{"day":"週日","count":0}
-    ]
-  },
-  "timeline_events": []
-};
-
-// ══════════════════════════════════════════
-//  從 API 載入資料，失敗則用假資料
-// ══════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// 資料載入
+// ═══════════════════════════════════════════════════════
 async function loadData() {
-  // 從 localStorage 取得當前長者 ID（由語音互動頁面註冊時寫入）
-  const currentElderId = localStorage.getItem('active_elder_id');
-  if (!currentElderId) {
-    console.warn('⚠️ 尚未註冊任何長者，使用備用假資料');
-    return FALLBACK_DATA;
-  }
-  
   try {
-    const sessionToken = localStorage.getItem('session_token') || '';
-    const res = await fetch(`${API_BASE}/api/elder/${currentElderId}`, { 
-      headers: { 'Authorization': `Bearer ${sessionToken}` },
-      signal: AbortSignal.timeout(5000) 
+    const res = await fetch(`/api/elder/${elderId}`, {
+      headers: elderToken ? { 'Authorization': `Bearer ${elderToken}` } : {}
     });
-    if (res.status === 401 || res.status === 403) {
-      console.warn('⚠️ 存取被拒絕，請重新登入');
-      return FALLBACK_DATA;
-    }
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const raw = await res.json();
-
-    // 直接使用新格式回傳
-    return {
-      elder_id: raw.elder_id || currentElderId,
-      personal_info: raw.personal_info || FALLBACK_DATA.personal_info,
-      localization_settings: raw.localization_settings || FALLBACK_DATA.localization_settings,
-      care_baseline: raw.care_baseline || FALLBACK_DATA.care_baseline,
-      medication_tracker: raw.medication_tracker || FALLBACK_DATA.medication_tracker,
-      report_date: raw.report_date || FALLBACK_DATA.report_date,
-      today_summary: raw.today_summary || FALLBACK_DATA.today_summary,
-      interaction_stats: raw.interaction_stats || FALLBACK_DATA.interaction_stats,
-      timeline_events: raw.timeline_events || FALLBACK_DATA.timeline_events,
-      emotion_summary: raw.emotion_summary || {},
-    };
-  } catch (err) {
-    console.warn('⚠️ API 連線失敗，使用備用假資料：', err.message);
-    return FALLBACK_DATA;
+    if (!res.ok) throw new Error('API error');
+    elderData = await res.json();
+    document.getElementById('topElderName').textContent = elderData.personal_info?.nickname || '';
+    renderCurrentPage();
+  } catch(e) {
+    document.getElementById('pageContainer').innerHTML = `<div class="card p-6 text-center"><p class="text-slate-400">無法載入資料</p><p class="text-xs text-slate-500 mt-2">${e.message}</p></div>`;
   }
 }
 
-// ══════════════════════════════════════════
-//  主程式初始化 (包裝在 async 內，避免外層 await 的語法錯誤)
-// ══════════════════════════════════════════
-async function init() {
-  const DATA = await loadData();
+// ═══════════════════════════════════════════════════════
+// Router
+// ═══════════════════════════════════════════════════════
+function renderCurrentPage() {
+  const hash = location.hash || '#home';
+  const pages = { '#home': renderHome, '#profile': renderProfile, '#summary': renderSummary, '#emotion': renderEmotion, '#stats': renderStats, '#timeline': renderTimeline, '#reminders': renderReminders, '#settings': renderSettings };
+  const fn = pages[hash] || renderHome;
+  fn();
+  // 更新 nav active
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('href') === hash);
+  });
+}
+window.addEventListener('hashchange', renderCurrentPage);
 
-  // ── 輔助函式（全域化，供 renderTimeline 使用）──
-  window._fmt = function(dt) {
-    const d = new Date(dt);
-    if (isNaN(d.getTime())) {
-      if (typeof dt === 'string' && dt.includes('T')) {
-        return dt.substring(dt.indexOf('T') + 1, dt.indexOf('T') + 6) || dt;
-      }
-      return dt || '--:--';
-    }
-    return d.toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', hour12:false});
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('hidden');
+  sb.classList.toggle('fixed');
+  sb.classList.toggle('inset-0');
+  sb.classList.toggle('z-40');
+  sb.classList.toggle('bg-slate-900');
+  sb.classList.toggle('pt-16');
+}
+
+// ═══════════════════════════════════════════════════════
+// Page: 首頁總覽
+// ═══════════════════════════════════════════════════════
+function renderHome() {
+  if (!elderData) return;
+  const s = elderData.today_summary || {};
+  const m = s.metrics || {};
+  const stats = elderData.interaction_stats || {};
+  const medStatus = m.medication_taken ? '✓ 已服藥' : '⏳ 待確認';
+  const medColor = m.medication_taken ? 'text-emerald-400' : 'text-amber-400';
+  const emotion = m.emotion || '未檢測';
+  const emotionIcon = {'開心':'😊','難過':'😢','生氣':'😠','中立':'😐','未檢測':'🔍'}[emotion] || '🔍';
+
+  document.getElementById('pageContainer').innerHTML = `
+    <h2 class="text-lg font-bold mb-4">📋 今日總覽</h2>
+    <div class="card p-4 mb-4"><p class="text-sm text-slate-300">${s.text || '今天還沒有互動紀錄'}</p></div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      <div class="card p-4 text-center"><div class="text-2xl mb-1">💊</div><div class="text-xs text-slate-400">用藥</div><div class="text-sm font-bold ${medColor}">${medStatus}</div></div>
+      <div class="card p-4 text-center"><div class="text-2xl mb-1">${emotionIcon}</div><div class="text-xs text-slate-400">情緒</div><div class="text-sm font-bold text-cyan-400">${emotion}</div></div>
+      <div class="card p-4 text-center"><div class="text-2xl mb-1">💬</div><div class="text-xs text-slate-400">互動</div><div class="text-sm font-bold text-white">${stats.total_turns || 0} 次</div></div>
+      <div class="card p-4 text-center"><div class="text-2xl mb-1">📡</div><div class="text-xs text-slate-400">LINE</div><div class="text-sm font-bold ${elderData.line_notification_status?.is_sent ? 'text-emerald-400' : 'text-slate-500'}">${elderData.line_notification_status?.is_sent ? '已推播' : '未推播'}</div></div>
+    </div>
+    ${(!m.medication_taken && stats.total_turns > 0) ? '<div class="card p-3 border-amber-500/50 bg-amber-500/10 mb-4"><span class="text-amber-300 text-sm font-bold">⚠️ 今日尚未確認服藥</span></div>' : ''}
+    ${(emotion === '難過' || emotion === '生氣') ? '<div class="card p-3 border-red-500/50 bg-red-500/10 mb-4"><span class="text-red-300 text-sm font-bold">⚠️ 長者情緒低落，建議關心</span></div>' : ''}
+  `;
+}
+
+// ═══════════════════════════════════════════════════════
+// Page: 長者資料
+// ═══════════════════════════════════════════════════════
+function renderProfile() {
+  if (!elderData) return;
+  const p = elderData.personal_info || {};
+  const ec = elderData.emergency_contact || {};
+  const med = elderData.medical_safety || {};
+  const phy = elderData.physical_care || {};
+  const men = elderData.mental_cognitive || {};
+  const loc = elderData.localization_settings || {};
+
+  const field = (label, val) => `<div class="flex justify-between py-1.5 border-b border-slate-700/50"><span class="text-xs text-slate-400">${label}</span><span class="text-sm text-white">${val || '<span class=text-slate-500>尚未填寫</span>'}</span></div>`;
+
+  document.getElementById('pageContainer').innerHTML = `
+    <h2 class="text-lg font-bold mb-4">👤 長者資料</h2>
+    <div class="card p-4 mb-3"><h3 class="text-sm font-bold text-cyan-400 mb-2">個人資訊</h3>
+      ${field('姓名', p.name)}${field('暱稱', p.nickname)}${field('性別', p.gender==='male'?'男':'女')}${field('年齡', p.age)}${field('居住地', p.location)}
+    </div>
+    <div class="card p-4 mb-3"><h3 class="text-sm font-bold text-cyan-400 mb-2">緊急聯絡人</h3>
+      ${field('姓名', ec.name)}${field('關係', ec.relationship)}${field('電話', ec.phone)}
+    </div>
+    <div class="card p-4 mb-3"><h3 class="text-sm font-bold text-cyan-400 mb-2">醫療安全</h3>
+      ${field('慢性疾病', (med.chronic_diseases||[]).join('、'))}${field('目前用藥', (med.current_medications||[]).join('、'))}${field('藥物過敏', (med.drug_allergies||[]).join('、'))}${field('食物過敏', (med.food_allergies||[]).join('、'))}
+    </div>
+    <div class="card p-4 mb-3"><h3 class="text-sm font-bold text-cyan-400 mb-2">身體照護</h3>
+      ${field('行動能力', phy.mobility)}${field('飲食禁忌', (phy.dietary_restrictions||[]).join('、'))}
+    </div>
+    <div class="card p-4"><h3 class="text-sm font-bold text-cyan-400 mb-2">認知狀態</h3>
+      ${field('失智症', men.has_dementia ? '是' : '否')}${field('照護備註', men.cognitive_notes)}
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════
+// Page: 每日摘要
+// ═══════════════════════════════════════════════════════
+function renderSummary() {
+  if (!elderData) return;
+  const s = elderData.today_summary || {};
+  const m = s.metrics || {};
+  const medByPeriod = m.medication_by_period || {};
+
+  const medIcon = (status) => {
+    if (!status) return '<span class="text-slate-500">—</span>';
+    if (status.includes('已服藥')) return `<span class="text-emerald-400">✓ ${status}</span>`;
+    if (status.includes('未服藥') || status.includes('忘記')) return `<span class="text-red-400">✗ ${status}</span>`;
+    return `<span class="text-amber-400">⏳ ${status}</span>`;
   };
-  const fmt = window._fmt;
-  function fmtDate(str) {
-    if (!str) return '日期未知';
-    const parts = str.split(/[-/]/);
-    if (parts.length < 3) return str;
-    const [y, m, d] = parts;
-    return `${y} 年 ${m} 月 ${d} 日`;
+
+  let medHtml = '';
+  if (Object.keys(medByPeriod).length > 0) {
+    medHtml = Object.entries(medByPeriod).map(([period, status]) => `<div class="pl-4 text-sm">${period} — ${medIcon(status)}</div>`).join('');
+  } else {
+    medHtml = `<div class="pl-4 text-sm">${m.medication_taken ? '✓ 已服藥' : '未提及'}</div>`;
   }
 
-  const typeConfig = window._typeConfig = {
-    health:      { icon:'💊', color:'text-emerald-400', bg:'bg-emerald-500/10', border:'border-emerald-500/40', dot:'bg-emerald-400' },
-    interaction: { icon:'🤖', color:'text-violet-400',  bg:'bg-violet-500/10',  border:'border-violet-500/40',  dot:'bg-violet-400' },
-    activity:    { icon:'🚶', color:'text-sky-400',     bg:'bg-sky-500/10',     border:'border-sky-500/40',    dot:'bg-sky-400' },
-    alert:       { icon:'⚠️', color:'text-amber-400',  bg:'bg-amber-500/10',   border:'border-amber-500/40',  dot:'bg-amber-400' },
-    '語音關懷':   { icon:'🤖', color:'text-violet-400',  bg:'bg-violet-500/10',  border:'border-violet-500/40',  dot:'bg-violet-400' },
-    '用藥提醒':   { icon:'💊', color:'text-emerald-400', bg:'bg-emerald-500/10', border:'border-emerald-500/40', dot:'bg-emerald-400' },
-    '日常活動':   { icon:'🚶', color:'text-sky-400',     bg:'bg-sky-500/10',     border:'border-sky-500/40',    dot:'bg-sky-400' },
-    '健康警訊':   { icon:'⚠️', color:'text-amber-400',  bg:'bg-amber-500/10',   border:'border-amber-500/40',  dot:'bg-amber-400' },
-    '健康紀錄':   { icon:'📋', color:'text-emerald-400', bg:'bg-emerald-500/10', border:'border-emerald-500/40', dot:'bg-emerald-400' },
-  };
-  const structuredConfig = {
-    diet:       { icon:'🍚', label:'飲食' },
-    activity:   { icon:'🏃', label:'活動' },
-    sleep:      { icon:'😴', label:'睡眠' },
-    medication: { icon:'💊', label:'用藥' },
-  };
+  document.getElementById('pageContainer').innerHTML = `
+    <h2 class="text-lg font-bold mb-4">📋 每日摘要 <span class="text-xs text-slate-400 font-normal">${elderData.report_date || ''}</span></h2>
+    <div class="card p-4 mb-3"><p class="text-sm text-slate-300">${s.text || '今天還沒有互動紀錄'}</p></div>
+    <div class="space-y-3">
+      <div class="card p-4"><div class="text-sm font-bold text-cyan-400 mb-2">🍚 飲食</div><div class="text-sm text-slate-300 pl-4">${m.diet || '未提及'}</div></div>
+      <div class="card p-4"><div class="text-sm font-bold text-cyan-400 mb-2">💊 用藥</div>${medHtml}</div>
+      <div class="card p-4"><div class="text-sm font-bold text-cyan-400 mb-2">😴 睡眠</div><div class="text-sm text-slate-300 pl-4">${m.sleep || '未提及'}</div></div>
+      <div class="card p-4"><div class="text-sm font-bold text-cyan-400 mb-2">🏃 活動</div><div class="text-sm text-slate-300 pl-4">${m.activity || '未提及'}</div></div>
+      <div class="card p-4"><div class="text-sm font-bold text-cyan-400 mb-2">🎭 情緒</div><div class="text-sm text-slate-300 pl-4">${m.emotion || '未檢測'}${m.emotion_reason ? ' — ' + m.emotion_reason : ''}</div></div>
+    </div>
+  `;
+}
 
-  // ── 個人資料 ──
-  const p = DATA.personal_info;
-  const care = DATA.care_baseline;
-  document.getElementById('elderName').textContent = p.name || '長輩';
-  document.getElementById('elderNickname').textContent = p.nickname || '';
-  document.getElementById('elderId').textContent = `ID: ${DATA.elder_id}`;
-  document.getElementById('elderAge').textContent = p.age ? `${p.age} 歲` : '未設定';
-  document.getElementById('elderLocation').textContent = p.location || '未設定';
-  document.getElementById('elderLang').textContent = DATA.localization_settings?.primary_language || '中文';
-  document.getElementById('elderNotes').textContent = '📝 ' + (care.core_emotional_need || '暫無備註');
-  // 根據性別設定頭像
-  const genderEmoji = p.gender === 'male' ? '👴' : (p.gender === 'female' ? '👵' : '👤');
-  document.getElementById('elderEmoji').textContent = genderEmoji;
+// ═══════════════════════════════════════════════════════
+// Page: 情緒趨勢
+// ═══════════════════════════════════════════════════════
+function renderEmotion() {
+  if (!elderData) return;
+  const history = elderData.emotion_history || [];
+  const latest = history.length > 0 ? history[history.length - 1] : null;
+  const emotionIcon = {'開心':'😊','難過':'😢','生氣':'😠','恐懼':'😰','中立':'😐','未檢測':'🔍'}[latest?.emotion] || '🔍';
+  const emotionMap = {'開心':5,'吃驚':4,'中立':3,'難過':2,'生氣':1,'恐懼':1,'未檢測':3};
 
-  // 疾病標籤
-  document.getElementById('elderHealth').innerHTML = '';
-  (care.chronic_diseases || care.diseases || []).forEach(s => {
-    document.getElementById('elderHealth').insertAdjacentHTML('beforeend',
-      `<span class="px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs">${s}</span>`);
-  });
+  const recent20 = history.slice(-20);
 
-  // ── AI 摘要 ──
-  const summary = DATA.today_summary;
-  document.getElementById('summaryDate').textContent = fmtDate(DATA.report_date);
-  document.getElementById('overallSummary').textContent = summary.text || '等待今日第一次互動...';
+  document.getElementById('pageContainer').innerHTML = `
+    <h2 class="text-lg font-bold mb-4">😊 情緒趨勢</h2>
+    <div class="card p-4 mb-4 flex items-center gap-4">
+      <div class="text-4xl">${emotionIcon}</div>
+      <div><div class="text-lg font-bold text-white">${latest?.emotion || '未檢測'}</div><div class="text-xs text-slate-400">${latest?.reason || ''}</div></div>
+    </div>
+    <div class="card p-4 mb-4"><canvas id="emotionChart" height="200"></canvas></div>
+    <div class="card p-4"><h3 class="text-sm font-bold text-slate-400 mb-3">最近記錄</h3>
+      <div class="space-y-2 max-h-64 overflow-y-auto">
+        ${recent20.reverse().map(e => `<div class="flex justify-between text-xs py-1 border-b border-slate-700/50"><span class="text-slate-400">${(e.time||'').slice(11,16)}</span><span class="text-white">${e.emotion}</span><span class="text-slate-500">${(e.reason||'').slice(0,20)}</span></div>`).join('')}
+      </div>
+    </div>
+  `;
 
-  // ── 結構化記錄卡（從 metrics 提取）──
-  document.getElementById('structuredData').innerHTML = '';
-  const metrics = summary.metrics || {};
-  const metricMap = {
-    diet: metrics.diet || '今日尚未記錄飲食',
-    activity: metrics.activity || '今日尚未記錄活動',
-    sleep: metrics.sleep || '今日尚未記錄睡眠',
-    medication: metrics.medication || (metrics.medication_taken ? `已服藥（${metrics.medication_name || '藥物'}）` : '今日尚未記錄用藥'),
-  };
-
-  // 從時間軸取得各類別的詳細歷史紀錄（從對話內容匹配關鍵詞）
-  const _allEvts = DATA.timeline_events || [];
-  const detailMap = {
-    diet: _allEvts.filter(ev => {
-      const d = ev.description || '';
-      return (ev.title && ev.title.includes('飲食')) || 
-             (/粥|麵|飯|菜|肉|湯|水果|牛奶|茶|豆漿|果汁|吐司|蛋|便當|餅/.test(d));
-    }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
-    activity: _allEvts.filter(ev => {
-      const d = ev.description || '';
-      return ev.type === 'activity' || (ev.title && ev.title.includes('活動')) ||
-             (/散步|運動|看電視|種菜|煮飯|打掃|出門|逛|公園/.test(d));
-    }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
-    sleep: _allEvts.filter(ev => {
-      const d = ev.description || '';
-      return (ev.title && ev.title.includes('睡眠')) || (/睡|失眠|午覺|醒/.test(d));
-    }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
-    medication: _allEvts.filter(ev => {
-      const d = ev.description || '';
-      return (ev.title && (ev.title.includes('用藥') || ev.title.includes('服藥'))) ||
-             (/藥|服藥|吃藥/.test(d));
-    }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
-  };
-
-  Object.entries(metricMap).forEach(([key, val]) => {
-    const cfg = structuredConfig[key];
-    if (!cfg) return;
-    const displayVal = val.replace(/\n/g, '<br>');
-    const details = detailMap[key] || '';
-    const hasDetails = details.length > 0;
-    const detailHtml = hasDetails 
-      ? `<div class="detail-section hidden mt-2 pt-2 border-t border-slate-600/50">
-           <p class="text-[11px] text-slate-500 mb-1 font-bold">詳細紀錄來源：</p>
-           <p class="text-xs text-slate-400 leading-relaxed">${details.replace(/\n/g, '<br>')}</p>
-         </div>
-         <button onclick="this.previousElementSibling.classList.toggle('hidden'); this.textContent = this.textContent === '▼ 展開詳細紀錄' ? '▲ 收合' : '▼ 展開詳細紀錄';" 
-                 class="text-[11px] text-cyan-400 hover:text-cyan-300 mt-2 font-bold cursor-pointer">▼ 展開詳細紀錄</button>`
-      : '';
-    document.getElementById('structuredData').insertAdjacentHTML('beforeend', `
-      <div class="rounded-xl bg-slate-700/50 border border-slate-600/50 p-3">
-        <div class="text-xs font-bold text-slate-400 mb-1.5">${cfg.icon} ${cfg.label}</div>
-        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">${displayVal}</p>
-        ${detailHtml}
-      </div>`);
-  });
-
-  // ── 今日心情（從 metrics 的 emotion 欄位讀取）──
-  const emotionMap = {
-    '開心': { emoji: '😊' },
-    '難過': { emoji: '😢' },
-    '生氣': { emoji: '😠' },
-    '恐懼': { emoji: '😰' },
-    '吃驚': { emoji: '😲' },
-    '厭惡': { emoji: '😣' },
-    '未檢測': { emoji: '❓' },
-  };
-  const currentEmotion = metrics.emotion || metrics.latest_emotion || '未檢測';
-  const emotionReason = metrics.emotion_reason || '';
-  const moodInfo = emotionMap[currentEmotion] || emotionMap['未檢測'];
-
-  // 心情趨勢圖
-  const emotionHistory = DATA.emotion_history || [];
-  if (emotionHistory.length > 1) {
-    document.getElementById('emotionTrendEmpty').style.display = 'none';
-    document.getElementById('emotionTrendChart').style.display = '';
-    const emoValueMap = { '開心': 5, '吃驚': 4, '中立': 3, '難過': 2, '生氣': 1, '恐懼': 1, '厭惡': 1, '未檢測': 3 };
-    const recent = emotionHistory.slice(0, 20).reverse();
-    const labels = recent.map(r => {
-      const d = new Date(r.time);
-      return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
-    });
-    const values = recent.map(r => emoValueMap[r.emotion] || 3);
-    
-    new Chart(document.getElementById('emotionTrendChart'), {
+  // 繪製圖表
+  if (recent20.length > 1) {
+    const ctx = document.getElementById('emotionChart').getContext('2d');
+    new Chart(ctx, {
       type: 'line',
       data: {
-        labels: labels,
+        labels: recent20.map(e => (e.time||'').slice(11,16)),
         datasets: [{
-          data: values,
-          borderColor: 'rgba(96,165,250,0.8)',
-          backgroundColor: 'rgba(96,165,250,0.1)',
-          fill: true,
-          tension: 0.3,
-          pointRadius: 3,
-          pointBackgroundColor: values.map(v => v >= 4 ? '#4ade80' : v <= 2 ? '#f87171' : '#94a3b8'),
+          label: '情緒',
+          data: recent20.map(e => emotionMap[e.emotion] || 3),
+          borderColor: '#06b6d4',
+          backgroundColor: 'rgba(6,182,212,0.1)',
+          fill: true, tension: 0.3, pointRadius: 5
         }]
       },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: {
-          callbacks: { label: ctx => recent[ctx.dataIndex]?.emotion || '' }
-        }},
-        scales: {
-          x: { display: false },
-          y: { min: 0, max: 6, display: false }
-        }
-      }
+      options: { responsive: true, scales: { y: { min: 0, max: 6, ticks: { callback: v => ['','恐懼/生氣','難過','中立','吃驚','開心',''][v], color: '#94a3b8' }, grid: { color: '#334155' } }, x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } } }, plugins: { legend: { display: false } } }
     });
   }
-
-  // ── 本週互動統計 ──
-  const stats = DATA.interaction_stats;
-  document.getElementById('weeklyTotal').textContent = stats.total_turns || 0;
-
-  // ── Chart.js 長條圖 ──
-  const labels = (stats.weekly_trend || []).map(d => d.day);
-  const counts = (stats.weekly_trend || []).map(d => d.count);
-  new Chart(document.getElementById('interactionChart'), {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        data: counts,
-        backgroundColor: counts.map((_, i) =>
-          i === 6 ? 'rgba(6,182,212,0.9)' : 'rgba(99,102,241,0.6)'),
-        borderColor: counts.map((_, i) =>
-          i === 6 ? 'rgba(6,182,212,1)' : 'rgba(99,102,241,1)'),
-        borderWidth: 2,
-        borderRadius: 6,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: {
-        callbacks: { label: ctx => ` ${ctx.parsed.y} 次互動` }
-      }},
-      scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { size: 11 } } },
-        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { size: 11 }, stepSize: 1 }, min: 0 }
-      }
-    }
-  });
-
-  // ── 時間軸 ──
-  document.getElementById('timelineDate').textContent = fmtDate(DATA.report_date);
-  window._allTimelineEvents = DATA.timeline_events || [];
-  renderTimeline('all');
 }
 
-// 時間軸篩選功能
-function filterTimeline(type) {
-  // 更新按鈕樣式
-  document.querySelectorAll('.tl-filter').forEach(btn => {
-    btn.classList.remove('active', 'bg-slate-600', 'text-white');
-    btn.classList.add('bg-slate-700/50', 'text-slate-400');
-  });
-  event.currentTarget.classList.add('active', 'bg-slate-600', 'text-white');
-  event.currentTarget.classList.remove('bg-slate-700/50', 'text-slate-400');
-  renderTimeline(type);
+// ═══════════════════════════════════════════════════════
+// Page: 互動統計
+// ═══════════════════════════════════════════════════════
+function renderStats() {
+  if (!elderData) return;
+  const stats = elderData.interaction_stats || {};
+  const trend = stats.weekly_trend || [];
+
+  document.getElementById('pageContainer').innerHTML = `
+    <h2 class="text-lg font-bold mb-4">📊 互動統計</h2>
+    <div class="card p-6 mb-4 text-center">
+      <div class="text-4xl font-black text-emerald-400">${stats.total_turns || 0}</div>
+      <div class="text-sm text-slate-400 mt-1">今日互動次數</div>
+    </div>
+    <div class="card p-4"><h3 class="text-sm font-bold text-slate-400 mb-3">最近 7 天</h3><canvas id="statsChart" height="200"></canvas></div>
+  `;
+
+  if (trend.length > 0) {
+    const ctx = document.getElementById('statsChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: trend.map(t => t.day),
+        datasets: [{ data: trend.map(t => t.count), backgroundColor: '#10b981', borderRadius: 6 }]
+      },
+      options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }, x: { ticks: { color: '#94a3b8' }, grid: { display: false } } }, plugins: { legend: { display: false } } }
+    });
+  }
 }
 
-function renderTimeline(filterType) {
-  const fmt = window._fmt || (t => t || '--:--');
-  const tlContainer = document.getElementById('timeline');
-  tlContainer.innerHTML = '';
-  
-  let events = window._allTimelineEvents || [];
-  
-  // 篩選
-  if (filterType !== 'all') {
-    events = events.filter(ev => ev.type === filterType);
-  }
-  
-  // 排序：最新的在上面（時間降序）
-  events = [...events].sort((a, b) => {
-    const ta = new Date(a.time || 0).getTime();
-    const tb = new Date(b.time || 0).getTime();
-    return tb - ta;
-  });
+// ═══════════════════════════════════════════════════════
+// Page: 事件時間軸
+// ═══════════════════════════════════════════════════════
+const typeIcons = {diet:'🍚',medication:'💊',sleep:'😴',activity:'🏃',emotion:'😊',health:'🏥',social:'👥',cognitive:'🧠',system:'⚙️',other:'📌',interaction:'💬'};
+const typeColors = {diet:'bg-amber-500',medication:'bg-emerald-500',sleep:'bg-indigo-500',activity:'bg-orange-500',emotion:'bg-pink-500',health:'bg-red-500',social:'bg-blue-500',cognitive:'bg-purple-500',system:'bg-slate-500',other:'bg-slate-400',interaction:'bg-cyan-500'};
+let timelineFilter = null;
 
-  if (events.length === 0) {
-    tlContainer.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">暫無此類事件</p>';
-    return;
-  }
+function renderTimeline() {
+  if (!elderData) return;
+  const events = (elderData.timeline_events || []).sort((a,b) => (a.time||'').localeCompare(b.time||''));
+  const types = [...new Set(events.map(e => e.type))];
+  const filtered = timelineFilter ? events.filter(e => e.type === timelineFilter) : events;
 
-  events.forEach((ev, i) => {
-    const typeConfig = window._typeConfig || {};
-    const cfg = typeConfig[ev.type] || typeConfig.interaction || { icon:'💬', color:'text-slate-400', bg:'bg-slate-500/10', border:'border-slate-500/40' };
-    const isLast = i === events.length - 1;
-    
-    // 對話類型：將使用者和 AI 分開顯示
-    let contentHtml = '';
-    if (ev.type === 'interaction' && ev.description) {
-      const lines = ev.description.split('\n');
-      const userLine = lines.find(l => l.startsWith('長者說：') || l.startsWith('長者：'));
-      const aiLine = lines.find(l => l.startsWith('AI回覆：') || l.startsWith('助理：') || l.startsWith('小黃：'));
-      
-      if (userLine || aiLine) {
-        contentHtml = '<div class="space-y-1.5 mt-1">';
-        if (userLine) {
-          contentHtml += `<div class="flex gap-2 items-start">
-            <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 font-bold">長者</span>
-            <p class="text-xs text-slate-300 leading-relaxed">${userLine.replace(/^(長者說：|長者：)/, '')}</p>
-          </div>`;
-        }
-        if (aiLine) {
-          contentHtml += `<div class="flex gap-2 items-start">
-            <span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0 font-bold">小黃</span>
-            <p class="text-xs text-slate-300 leading-relaxed">${aiLine.replace(/^(AI回覆：|助理：|小黃：)/, '')}</p>
-          </div>`;
-        }
-        contentHtml += '</div>';
-      } else {
-        contentHtml = `<p class="text-xs sm:text-sm text-slate-400 leading-relaxed">${ev.description}</p>`;
-      }
-    } else {
-      contentHtml = `<p class="text-xs sm:text-sm text-slate-400 leading-relaxed">${ev.description || ''}</p>`;
-    }
-    
-    tlContainer.insertAdjacentHTML('beforeend', `
-      <div class="relative flex gap-4 pb-${isLast ? '0' : '5'}">
-        ${!isLast ? '<div class="timeline-line"></div>' : ''}
-        <div class="relative z-10 w-9 h-9 rounded-full ${cfg.bg} border ${cfg.border} flex items-center justify-center text-base shrink-0">${cfg.icon}</div>
-        <div class="flex-1 min-w-0 pt-0.5">
-          <div class="flex items-center gap-2 flex-wrap mb-1">
-            <span class="text-[11px] font-bold text-slate-300">${fmt(ev.time || '')}</span>
-            <span class="text-[10px] px-1.5 py-0.5 rounded-full border ${cfg.bg} ${cfg.color} ${cfg.border}">${{'interaction':'對話','health':'健康','activity':'活動'}[ev.type] || ev.type || '互動'}</span>
-          </div>
-          <div class="font-bold text-xs text-white mb-0.5">${ev.title || ''}</div>
-          ${contentHtml}
+  document.getElementById('pageContainer').innerHTML = `
+    <h2 class="text-lg font-bold mb-4">⏱️ 事件時間軸</h2>
+    <div class="flex flex-wrap gap-2 mb-4">
+      <button class="text-xs px-2 py-1 rounded ${!timelineFilter?'bg-cyan-600 text-white':'bg-slate-700 text-slate-300'}" onclick="timelineFilter=null;renderTimeline()">全部</button>
+      ${types.map(t => `<button class="text-xs px-2 py-1 rounded ${timelineFilter===t?'bg-cyan-600 text-white':'bg-slate-700 text-slate-300'}" onclick="timelineFilter='${t}';renderTimeline()">${typeIcons[t]||'📌'} ${t}</button>`).join('')}
+    </div>
+    <div class="relative pl-6">
+      <div class="absolute left-[9px] top-0 bottom-0 w-0.5 bg-slate-700"></div>
+      ${filtered.length === 0 ? '<p class="text-sm text-slate-500">今天還沒有事件</p>' : filtered.map(e => `
+        <div class="relative mb-4 pl-6">
+          <div class="timeline-dot ${typeColors[e.type]||'bg-slate-500'} absolute left-0 top-1.5"></div>
+          <div class="text-xs text-slate-400">${(e.time||'').slice(11,16)} ${typeIcons[e.type]||''}</div>
+          <div class="text-sm font-bold text-white">${e.title||''}</div>
+          <div class="text-xs text-slate-400">${e.description||''}</div>
         </div>
-      </div>`);
-  });
-
-/*
-  // ── Mini 統計卡（右下） ──
-  document.getElementById('miniStats').innerHTML = '';
-  const miniData = [
-    { icon:'💬', label:'本週對話', value: ds.interaction_stats.weekly_total, unit:'次', color:'text-cyan-400' },
-    { icon:'💊', label:'服藥率',   value: '100', unit:'%', color:'text-emerald-400' },
-    { icon:'💧', label:'飲水達成', value: '42',  unit:'%', color:'text-amber-400' },
-  ];
-  miniData.forEach(m => {
-    document.getElementById('miniStats').insertAdjacentHTML('beforeend', `
-      <div class="card p-3 flex flex-col items-center justify-center text-center gap-1">
-        <span class="text-xl">${m.icon}</span>
-        <div class="text-lg font-black ${m.color}">${m.value}<span class="text-xs font-normal">${m.unit}</span></div>
-        <div class="text-xs text-slate-500 leading-tight">${m.label}</div>
-      </div>`);
-  });
-*/
+      `).join('')}
+    </div>
+  `;
 }
 
-// 執行網頁初始化
-init();
-
-// ══════════════════════════════════════════
-//  📡 即時同步機制：SSE + localStorage 監聽
-// ══════════════════════════════════════════
-
-// ── 即時狀態指示器 ──
-function showLiveIndicator(message, type = 'info') {
-  // 在導覽列顯示即時互動通知
-  let indicator = document.getElementById('liveIndicator');
-  if (!indicator) {
-    const nav = document.querySelector('nav .max-w-screen-xl');
-    if (nav) {
-      nav.insertAdjacentHTML('beforeend', `
-        <div id="liveIndicator" class="fixed top-16 right-4 z-50 px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all duration-300 opacity-0 translate-y-[-8px]"
-             style="backdrop-filter:blur(8px)"></div>
-      `);
-      indicator = document.getElementById('liveIndicator');
-    }
-  }
-  if (!indicator) return;
-
-  const styles = {
-    info:       'bg-cyan-500/20 border border-cyan-500/40 text-cyan-300',
-    processing: 'bg-amber-500/20 border border-amber-500/40 text-amber-300',
-    success:    'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300',
-    error:      'bg-rose-500/20 border border-rose-500/40 text-rose-300',
-  };
-  indicator.className = `fixed top-16 right-4 z-50 px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all duration-300 ${styles[type] || styles.info}`;
-  indicator.textContent = message;
-  indicator.style.opacity = '1';
-  indicator.style.transform = 'translateY(0)';
-
-  // 5 秒後自動淡出
-  clearTimeout(indicator._hideTimer);
-  indicator._hideTimer = setTimeout(() => {
-    indicator.style.opacity = '0';
-    indicator.style.transform = 'translateY(-8px)';
-  }, 5000);
+// ═══════════════════════════════════════════════════════
+// Page: 提醒事項
+// ═══════════════════════════════════════════════════════
+function renderReminders() {
+  if (!elderData) return;
+  // elderData 沒有直接的 reminders，需要額外呼叫或從 timeline 提取
+  document.getElementById('pageContainer').innerHTML = `
+    <h2 class="text-lg font-bold mb-4">🔔 提醒事項</h2>
+    <div class="card p-4"><p class="text-sm text-slate-400">提醒事項功能開發中，長者可透過對話設定提醒（如「下午一點提醒我吃藥」）</p></div>
+  `;
 }
 
-// ── SSE 連線：接收後端即時推送 ──
-let sseRetryCount = 0;
+// ═══════════════════════════════════════════════════════
+// Page: 設定
+// ═══════════════════════════════════════════════════════
+function renderSettings() {
+  document.getElementById('pageContainer').innerHTML = `
+    <h2 class="text-lg font-bold mb-4">⚙️ 設定</h2>
+    <div class="space-y-3">
+      <div class="card p-4">
+        <h3 class="text-sm font-bold text-cyan-400 mb-3">📌 帳號資訊</h3>
+        <div class="text-xs text-slate-400">Elder ID: ${elderId}</div>
+        <div class="text-xs text-slate-400 mt-1">PIN 碼狀態：已設定</div>
+      </div>
+      <div class="card p-4">
+        <h3 class="text-sm font-bold text-cyan-400 mb-3">🔔 通知偏好</h3>
+        <div class="text-xs text-slate-400">LINE 推播：啟用</div>
+        <div class="text-xs text-slate-400 mt-1">每日推播時間：19:00</div>
+      </div>
+      <div class="card p-4">
+        <h3 class="text-sm font-bold text-cyan-400 mb-3">📦 資料管理</h3>
+        <button onclick="exportData()" class="text-xs px-3 py-1.5 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 transition">匯出我的資料（JSON）</button>
+      </div>
+      <div class="card p-4">
+        <h3 class="text-sm font-bold text-cyan-400 mb-3">ℹ️ 系統資訊</h3>
+        <div class="text-xs text-slate-400">版本：1.0.0</div>
+        <div class="text-xs text-slate-400 mt-1">語言：繁體中文</div>
+        <div class="text-xs text-slate-400 mt-1">AI 模型：Claude Sonnet 4</div>
+      </div>
+    </div>
+  `;
+}
+
+function exportData() {
+  if (!elderData) return;
+  const blob = new Blob([JSON.stringify(elderData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${elderId}_data.json`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════════
+// SSE 即時更新
+// ═══════════════════════════════════════════════════════
 function connectSSE() {
-  const evtSource = new EventSource('/api/elder/events/stream');
-
-  evtSource.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      if (data.type === 'heartbeat') return;
-      if (data.type === 'connected') {
-        sseRetryCount = 0;
-        console.log('[Dashboard SSE] 連線成功');
-        return;
-      }
-      // 收到互動事件 → 刷新看板
-      if (data.type === 'speech_interaction') {
-        showLiveIndicator(`🔔 新互動：${data.user_text?.substring(0, 15) || '語音對話'}...`, 'success');
-        // 延遲 1 秒後重新載入資料（等後端寫入完成）
-        setTimeout(() => refreshDashboard(), 1000);
-      }
-    } catch (e) {}
-  };
-
-  evtSource.onerror = () => {
-    evtSource.close();
-    sseRetryCount++;
-    const delay = Math.min(2000 * sseRetryCount, 30000);
-    console.warn(`[Dashboard SSE] 斷線，${delay / 1000}s 後重連...`);
-    setTimeout(connectSSE, delay);
-  };
-}
-
-// ── localStorage 監聯：接收同瀏覽器 index.html 的即時廣播 ──
-window.addEventListener('storage', (event) => {
-  if (event.key !== 'elder_interaction_event') return;
   try {
-    const data = JSON.parse(event.newValue);
-    if (!data) return;
-
-    switch (data.state) {
-      case 'processing':
-        showLiveIndicator('⏳ 長輩正在語音互動中...', 'processing');
-        break;
-      case 'completed':
-        showLiveIndicator(`✅ 互動完成：${data.user_text?.substring(0, 12) || ''}...`, 'success');
-        // 刷新看板資料
-        setTimeout(() => refreshDashboard(), 1500);
-        break;
-      case 'error':
-        showLiveIndicator('⚠️ 互動異常，請關注', 'error');
-        break;
-    }
-  } catch (e) {}
-});
-
-// ── 刷新看板核心函數 ──
-async function refreshDashboard() {
-  try {
-    const newData = await loadData();
-    // 更新 AI 摘要
-    const summary = newData.today_summary;
-    const summaryEl = document.getElementById('overallSummary');
-    const dateEl = document.getElementById('summaryDate');
-    if (summaryEl) {
-      summaryEl.textContent = summary.text || '等待互動...';
-      summaryEl.classList.remove('fade-up');
-      void summaryEl.offsetWidth;
-      summaryEl.classList.add('fade-up');
-    }
-    if (dateEl) dateEl.textContent = fmtDate(newData.report_date);
-
-    // 更新結構化記錄（與首次渲染保持一致）
-    const sdContainer = document.getElementById('structuredData');
-    if (sdContainer && summary.metrics) {
-      sdContainer.innerHTML = '';
-      const structuredConfig = {
-        diet: { icon:'🍚', label:'飲食' },
-        activity: { icon:'🏃', label:'活動' },
-        sleep: { icon:'😴', label:'睡眠' },
-        medication: { icon:'💊', label:'用藥' },
-      };
-      const metrics = summary.metrics;
-      const metricMap = {
-        diet: metrics.diet || '今日尚未記錄飲食',
-        activity: metrics.activity || '今日尚未記錄活動',
-        sleep: metrics.sleep || '今日尚未記錄睡眠',
-        medication: metrics.medication || (metrics.medication_taken ? `已服藥（${metrics.medication_name || '藥物'}）` : '今日尚未記錄用藥'),
-      };
-      const fmt = window._fmt || (t => '--:--');
-      const _rEvts = newData.timeline_events || [];
-      const detailMap = {
-        diet: _rEvts.filter(ev => {
-          const d = ev.description || '';
-          return (ev.title && ev.title.includes('飲食')) || 
-                 (/粥|麵|飯|菜|肉|湯|水果|牛奶|茶|豆漿|果汁|吐司|蛋|便當|餅/.test(d));
-        }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
-        activity: _rEvts.filter(ev => {
-          const d = ev.description || '';
-          return ev.type === 'activity' || (ev.title && ev.title.includes('活動')) ||
-                 (/散步|運動|看電視|種菜|煮飯|打掃|出門|逛|公園/.test(d));
-        }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
-        sleep: _rEvts.filter(ev => {
-          const d = ev.description || '';
-          return (ev.title && ev.title.includes('睡眠')) || (/睡|失眠|午覺|醒/.test(d));
-        }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
-        medication: _rEvts.filter(ev => {
-          const d = ev.description || '';
-          return (ev.title && (ev.title.includes('用藥') || ev.title.includes('服藥'))) ||
-                 (/藥|服藥|吃藥/.test(d));
-        }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
-      };
-      Object.entries(metricMap).forEach(([key, val]) => {
-        const cfg = structuredConfig[key];
-        if (!cfg) return;
-        const displayVal = val.replace(/\n/g, '<br>');
-        const details = detailMap[key] || '';
-        const hasDetails = details.length > 0;
-        const detailHtml = hasDetails 
-          ? `<div class="detail-section hidden mt-2 pt-2 border-t border-slate-600/50">
-               <p class="text-[11px] text-slate-500 mb-1 font-bold">詳細紀錄來源：</p>
-               <p class="text-xs text-slate-400 leading-relaxed">${details.replace(/\n/g, '<br>')}</p>
-             </div>
-             <button onclick="this.previousElementSibling.classList.toggle('hidden'); this.textContent = this.textContent === '▼ 展開詳細紀錄' ? '▲ 收合' : '▼ 展開詳細紀錄';" 
-                     class="text-[11px] text-cyan-400 hover:text-cyan-300 mt-2 font-bold cursor-pointer">▼ 展開詳細紀錄</button>`
-          : '';
-        sdContainer.insertAdjacentHTML('beforeend', `
-          <div class="rounded-xl bg-slate-700/50 border border-slate-600/50 p-3">
-            <div class="text-xs font-bold text-slate-400 mb-1.5">${cfg.icon} ${cfg.label}</div>
-            <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">${displayVal}</p>
-            ${detailHtml}
-          </div>`);
-      });
-    }
-
-    // 更新互動次數
-    const weeklyEl = document.getElementById('weeklyTotal');
-    if (weeklyEl) weeklyEl.textContent = newData.interaction_stats?.total_turns || 0;
-
-    // 更新時間軸
-    if (newData.timeline_events?.length) {
-      window._allTimelineEvents = newData.timeline_events;
-      renderTimeline('all');
-      // 重置篩選按鈕到「全部」
-      document.querySelectorAll('.tl-filter').forEach(btn => {
-        btn.classList.remove('active', 'bg-slate-600', 'text-white');
-        btn.classList.add('bg-slate-700/50', 'text-slate-400');
-      });
-      const allBtn = document.querySelector('.tl-filter');
-      if (allBtn) { allBtn.classList.add('active', 'bg-slate-600', 'text-white'); allBtn.classList.remove('bg-slate-700/50', 'text-slate-400'); }
-    }
-
-    console.log('[Dashboard] 資料已即時刷新');
-  } catch (e) {
-    console.warn('[Dashboard] 刷新失敗:', e.message);
-  }
+    const evtSource = new EventSource('/api/elder/events/stream');
+    evtSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'summary_updated' || data.type === 'speech_interaction') {
+          loadData();  // 重新載入資料
+        }
+      } catch(e) {}
+    };
+    evtSource.onerror = () => { setTimeout(connectSSE, 5000); };
+  } catch(e) {}
 }
 
-// 輔助函數（供 refreshDashboard 使用）
-function fmtDate(str) {
-  if (!str) return '日期未知';
-  const parts = str.split(/[-/]/);
-  if (parts.length < 3) return str;
-  const [y, m, d] = parts;
-  return `${y} 年 ${m} 月 ${d} 日`;
-}
-
-// ── 啟動 SSE 連線 ──
+// ═══════════════════════════════════════════════════════
+// 初始化
+// ═══════════════════════════════════════════════════════
+loadData();
 connectSSE();
-
-// ── 不自動輪詢，只有收到新互動事件時才刷新 ──
 </script>
 </body>
 </html>

@@ -513,6 +513,103 @@ def is_session_analysis_running(elder_id: str = "elder_001") -> bool:
 
 # ── 離開意圖偵測（LLM 判斷）─────────────────────────
 
+# ── 求助意圖偵測 + 安全規則 ─────────────────────────
+
+_SAFETY_RULES = None
+
+def _load_safety_rules() -> dict:
+    """載入安全規則 JSON（可配置，不需改程式碼）"""
+    global _SAFETY_RULES
+    if _SAFETY_RULES is not None:
+        return _SAFETY_RULES
+    rules_path = os.path.join(config.PROMPTS_DIR, "safety_rules.json")
+    try:
+        with open(rules_path, 'r', encoding='utf-8') as f:
+            _SAFETY_RULES = json.load(f)
+    except Exception:
+        _SAFETY_RULES = {"help_seeking_keywords": {"high_priority": [], "medium_priority": []}, "memory_importance_overrides": {"permanent": [], "high": [], "medium": []}}
+    return _SAFETY_RULES
+
+
+def _detect_help_seeking(user_text: str) -> dict:
+    """
+    偵測求助意圖。回傳 {"detected": bool, "priority": "high"|"medium"|None, "keyword": str}
+    """
+    rules = _load_safety_rules()
+    keywords = rules.get("help_seeking_keywords", {})
+    text = user_text.strip()
+
+    # 高優先級（可能緊急）
+    for kw in keywords.get("high_priority", []):
+        if kw in text:
+            return {"detected": True, "priority": "high", "keyword": kw}
+
+    # 中優先級（需關注）
+    for kw in keywords.get("medium_priority", []):
+        if kw in text:
+            return {"detected": True, "priority": "medium", "keyword": kw}
+
+    return {"detected": False, "priority": None, "keyword": ""}
+
+
+def _get_importance_override(user_text: str) -> str:
+    """
+    根據安全規則判斷記憶重要性最低等級。
+    回傳 "permanent" / "high" / "medium" / None（無覆蓋）
+    """
+    rules = _load_safety_rules()
+    overrides = rules.get("memory_importance_overrides", {})
+    text = user_text.strip()
+
+    for kw in overrides.get("permanent", []):
+        if kw in text:
+            return "permanent"
+    for kw in overrides.get("high", []):
+        if kw in text:
+            return "high"
+    for kw in overrides.get("medium", []):
+        if kw in text:
+            return "medium"
+    return None
+
+
+def _notify_caregiver_emergency(user_text: str, priority: str, keyword: str, elder_id: str):
+    """求助偵測觸發 → 推播緊急通知給照護者"""
+    try:
+        from services.line_bot import line_bot_api, TARGET_USER_ID
+        from linebot.models import TextSendMessage
+        from core.data_manager import DataManager
+
+        dm = DataManager(elder_id=elder_id)
+        profile = dm.get_profile()
+        elder_name = profile.get("personal_info", {}).get("nickname") or profile.get("personal_info", {}).get("name") or "長者"
+
+        emoji = "🚨" if priority == "high" else "⚠️"
+        level = "緊急" if priority == "high" else "注意"
+
+        msg = (
+            f"{emoji}【{level}通知】{elder_name}\n"
+            f"━━━━━━━━━━━\n"
+            f"長者剛才表示：「{user_text[:80]}」\n\n"
+            f"偵測到關鍵詞：{keyword}\n"
+            f"建議：{'請立即聯繫長者確認狀況' if priority == 'high' else '建議稍後關心長者狀況'}"
+        )
+
+        line_bot_api.push_message(TARGET_USER_ID, TextSendMessage(text=msg))
+        print(f"{emoji} [求助偵測] 已推播{level}通知給照護者：{keyword}")
+
+        # 記錄到 timeline
+        dm.add_timeline_event(
+            event_type="health",
+            title=f"{level}：偵測到「{keyword}」",
+            description=user_text[:100],
+        )
+    except Exception as e:
+        print(f"⚠️ [求助偵測] 推播失敗: {e}")
+
+
+# ── 離開意圖偵測（LLM 判斷）─────────────────────────
+
 def _detect_farewell(user_text: str) -> bool:
     """用 LLM 判斷使用者是否想結束對話"""
     try:
@@ -690,6 +787,14 @@ async def handle_chat_stream(req: ChatStreamRequest):
     long_term_ctx = elder_dm.get_long_term_summary_text()
     full_prompt = f"{long_term_ctx}{history_ctx}長者最新說的話：{user_text}"
 
+    # 取得聽力偏好
+    _hearing_status = "normal"
+    try:
+        _sensory = elder_dm.get_sensory_preferences()
+        _hearing_status = _sensory.get("hearing_status", "normal")
+    except Exception:
+        pass
+
     async def _post_chat_tasks_text(u_text: str, ai_text: str, eid: str):
         """背景後處理：即時分析 + 寫入"""
         import time as _bt
@@ -703,6 +808,11 @@ async def handle_chat_stream(req: ChatStreamRequest):
             elder_dm.update_today_summary("", {"latest_emotion": chat_emotion, "emotion": chat_emotion, "emotion_reason": emotion_reason})
             # 寫入情緒歷史（每次都記錄，不論是否檢測成功）
             elder_dm.add_emotion_record(chat_emotion, emotion_reason, confidence, "text")
+
+            # 求助意圖偵測
+            help_result = _detect_help_seeking(u_text)
+            if help_result["detected"]:
+                _notify_caregiver_emergency(u_text, help_result["priority"], help_result["keyword"], eid)
         except Exception as e:
             print(f"⚠️ [背景] record_full_interaction: {e}")
         
@@ -744,7 +854,7 @@ async def handle_chat_stream(req: ChatStreamRequest):
                 print(f"⏱️ [Chat] 句子 #{sentence_index} +{_elapsed:.1f}s：{sentence[:30]}...")
 
                 _tts_s = _t.time()
-                audio_data = await synthesize_sentence_to_bytes(sentence)
+                audio_data = await synthesize_sentence_to_bytes(sentence, hearing_status=_hearing_status)
                 print(f"⏱️ [Chat] TTS #{sentence_index}：{_t.time()-_tts_s:.2f}s")
 
                 if audio_data:
@@ -1041,6 +1151,14 @@ class ElderProfileRequest(BaseModel):
     has_dementia: bool = False
     has_wandering_history: bool = False
     care_notes: str = ""
+    # 感官偏好（新增）
+    hearing_status: str = "normal"  # "normal" | "weak"
+    # 興趣話題（新增）
+    interests: List[str] = []
+    interests_other: str = ""
+    memo: str = ""
+    # PIN 碼（新增）
+    pin: str = ""
 
 
 def _hash_id_number(id_number: str) -> str:
@@ -1156,6 +1274,22 @@ def save_elder_profile(req: ElderProfileRequest):
                 cognitive_notes=clean["care_notes"],
             )
 
+        # 寫入感官偏好（新增）
+        if req.hearing_status:
+            elder_dm.update_sensory_preferences(hearing_status=req.hearing_status)
+
+        # 寫入興趣話題（新增）
+        if req.interests or req.interests_other or req.memo:
+            elder_dm.update_interests(
+                topics=req.interests,
+                other=req.interests_other,
+                memo=req.memo,
+            )
+
+        # 設定 PIN 碼（新增）
+        if req.pin and len(req.pin) >= 4:
+            elder_dm.set_pin(req.pin)
+
         # 新用戶註冊成功，發行 session token
         token = _generate_session_token(elder_id)
         
@@ -1170,6 +1304,63 @@ def save_elder_profile(req: ElderProfileRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ═══════════════════════════════════════════════════════
+# API 3b: PIN 碼驗證（換裝置登入用）
+# ═══════════════════════════════════════════════════════
+class PinVerifyRequest(BaseModel):
+    nickname: str
+    pin: str
+
+@app.post("/api/elder/verify_pin")
+def verify_pin(req: PinVerifyRequest):
+    """透過慣稱 + PIN 碼驗證身分，回傳 elder_id"""
+    nickname = req.nickname.strip()
+    pin = req.pin.strip()
+
+    if not nickname or not pin:
+        raise HTTPException(status_code=400, detail="請輸入慣稱和 PIN 碼")
+
+    # 遍歷所有長者資料，找到 nickname 匹配的
+    data_dir = os.path.join(config.BASE_DIR, "data")
+    if not os.path.exists(data_dir):
+        raise HTTPException(status_code=401, detail="慣稱或 PIN 碼錯誤")
+
+    for elder_dir_name in os.listdir(data_dir):
+        if not elder_dir_name.startswith("elder_"):
+            continue
+        profile_path = os.path.join(data_dir, elder_dir_name, "elder_profile.json")
+        if not os.path.exists(profile_path):
+            continue
+        try:
+            with open(profile_path, 'r', encoding='utf-8') as f:
+                profile = json.load(f)
+            stored_nickname = profile.get("personal_info", {}).get("nickname", "")
+            if stored_nickname == nickname:
+                # 找到匹配的帳號，驗證 PIN
+                elder_dm = DataManager(elder_id=elder_dir_name)
+                if elder_dm.verify_pin(pin):
+                    token = _generate_session_token(elder_dir_name)
+                    return {
+                        "success": True,
+                        "elder_id": elder_dir_name,
+                        "token": token,
+                        "message": f"歡迎回來，{nickname}！"
+                    }
+                else:
+                    # 檢查是否鎖定
+                    meta = profile.get("meta", {})
+                    locked_until = meta.get("pin_locked_until")
+                    if locked_until and datetime.now().isoformat() < locked_until:
+                        raise HTTPException(status_code=423, detail="PIN 碼錯誤次數過多，帳號已鎖定 15 分鐘")
+                    raise HTTPException(status_code=401, detail="慣稱或 PIN 碼錯誤")
+        except HTTPException:
+            raise
+        except Exception:
+            continue
+
+    raise HTTPException(status_code=401, detail="慣稱或 PIN 碼錯誤")
 
 
 # ═══════════════════════════════════════════════════════
@@ -1426,6 +1617,41 @@ def reply_to_message(elder_id: str, req: MessageReplyRequest):
         return {"success": True}
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ═══════════════════════════════════════════════════════
+# API 10: 提醒事項（供前端輪詢）
+# ═══════════════════════════════════════════════════════
+
+@app.get("/api/reminders/{elder_id}/pending")
+def get_pending_reminders(elder_id: str):
+    """取得待處理的提醒事項"""
+    elder_id = _validate_elder_id(elder_id)
+    try:
+        elder_dm = DataManager(elder_id=elder_id)
+        data = elder_dm._load(elder_dm.reminders_path)
+        pending = [r for r in data.get("reminders", []) if r.get("status") == "pending"]
+        return {"pending_count": len(pending), "reminders": pending}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/reminders/{elder_id}/notify")
+def mark_reminder_notified(elder_id: str, content: str = ""):
+    """標記提醒為已通知"""
+    elder_id = _validate_elder_id(elder_id)
+    try:
+        elder_dm = DataManager(elder_id=elder_id)
+        data = elder_dm._load(elder_dm.reminders_path)
+        for r in data.get("reminders", []):
+            if r.get("status") == "pending" and (not content or r.get("content") == content):
+                r["status"] = "notified"
+                r["notified"] = True
+                break
+        elder_dm._save(elder_dm.reminders_path, data)
+        return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

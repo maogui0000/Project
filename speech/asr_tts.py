@@ -563,12 +563,13 @@ async def stream_speak_async(sentence_generator, voice_name: str = None):
     return full_text
 
 
-async def synthesize_sentence_to_bytes(text: str, voice_name: str = None) -> bytes:
+async def synthesize_sentence_to_bytes(text: str, voice_name: str = None, hearing_status: str = "normal") -> bytes:
     """
     合成單句語音並回傳 bytes（用於 Web API 串流傳輸給前端）。
     
     :param text: 要合成的單句文字
     :param voice_name: edge-tts 語音名稱
+    :param hearing_status: 聽力狀況 ("normal" / "weak")，weak 時語速降低、音量提高
     :return: MP3 音訊的 bytes 資料
     """
     text = _strip_emoji(text)
@@ -578,8 +579,12 @@ async def synthesize_sentence_to_bytes(text: str, voice_name: str = None) -> byt
     voice = voice_name or DEFAULT_STREAM_VOICE
     temp_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"_api_tts_{id(text)}.mp3")
     
+    # 聽力偏好調整：語速與音量
+    rate = "-10%" if hearing_status == "weak" else "+0%"
+    volume = "+30%" if hearing_status == "weak" else "+0%"
+    
     try:
-        communicate = edge_tts.Communicate(text, voice)
+        communicate = edge_tts.Communicate(text, voice, rate=rate, volume=volume)
         await communicate.save(temp_file)
         
         if os.path.exists(temp_file):
