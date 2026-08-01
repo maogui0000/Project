@@ -1,0 +1,51 @@
+{
+  "elder_id": "elder_demo_user_001",
+  "report_date": "2026-08-02",
+  "line_notification_status": {
+    "trigger_time": "19:00:00",
+    "is_sent": false
+  },
+  "today_summary": {
+    "text": "",
+    "metrics": {
+      "diet": "尚未記錄",
+      "sleep": "尚未記錄",
+      "medication_taken": false,
+      "medication_time": null
+    }
+  },
+  "interaction_stats": {
+    "total_turns": 0,
+    "weekly_trend": [
+      {
+        "day": "週一",
+        "count": 0
+      },
+      {
+        "day": "週二",
+        "count": 0
+      },
+      {
+        "day": "週三",
+        "count": 0
+      },
+      {
+        "day": "週四",
+        "count": 0
+      },
+      {
+        "day": "週五",
+        "count": 0
+      },
+      {
+        "day": "週六",
+        "count": 0
+      },
+      {
+        "day": "週日",
+        "count": 0
+      }
+    ]
+  },
+  "timeline_events": []
+}

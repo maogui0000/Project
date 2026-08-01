@@ -579,7 +579,9 @@ function initWakeWordDetection() {
   };
 
   recognition.onend = () => {
-    if (!isSessionActive && STATE === 'waiting_wake') recognition.start();
+    if (!isSessionActive && STATE === 'waiting_wake') {
+      try { recognition.start(); } catch(e) {}
+    }
     else if (isSessionActive) checkUnreadMessages();
   };
 
