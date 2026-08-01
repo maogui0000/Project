@@ -136,14 +136,17 @@ class WakeWordDetector:
     def stop(self):
         """停止偵測"""
         self._running = False
-        if self._thread:
-            self._thread.join(timeout=3)
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=5)
         print("[喚醒詞偵測] 已停止")
 
     def resume(self):
         """對話結束後恢復喚醒詞偵測"""
-        if not self._running:
-            self.start()
+        # 確保舊執行緒已完全結束
+        if self._thread and self._thread.is_alive():
+            self._running = False
+            self._thread.join(timeout=5)
+        self.start()
 
     def listen_once_blocking(self, max_retries: int = 200) -> bool:
         """
@@ -196,10 +199,14 @@ class WakeWordDetector:
 
                 text = self._transcribe(audio)
                 if text and text != "__ERROR__" and self._contains_wake_word(text):
+                    # 偵測到喚醒詞，暫停監聽並觸發 callback
                     self._running = False
+                    print("[喚醒詞偵測] 喚醒詞偵測到，暫停監聽")
                     self.callback()
-                    break
+                    return  # 結束執行緒
             except Exception as e:
+                if not self._running:
+                    return  # 被外部 stop/resume 中斷，正常退出
                 print(f"[喚醒詞] 監聽迴圈錯誤：{e}")
 
     # ── 內部：錄音 ────────────────────────────────────

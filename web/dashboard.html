@@ -92,7 +92,7 @@
       <div class="card p-5">
         <div class="flex items-center gap-3 mb-4">
           <div class="relative">
-            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-3xl shadow-lg">👵</div>
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-3xl shadow-lg" id="elderEmoji">👤</div>
           </div>
           <div>
             <div class="text-lg font-black text-white" id="elderName"></div>
@@ -142,6 +142,15 @@
     ══════════════════════ -->
     <div class="lg:col-span-5 flex flex-col gap-4">
 
+      <!-- 心情趨勢圖 -->
+      <div class="card p-5" id="emotionTrendSection">
+        <div class="flex items-center gap-2 mb-3">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">🎭 心情趨勢</h3>
+        </div>
+        <div class="h-32"><canvas id="emotionTrendChart" style="display:none;"></canvas></div>
+        <p class="text-xs text-slate-500 text-center py-4" id="emotionTrendEmpty">尚無情緒資料，開始對話後將記錄心情變化</p>
+      </div>
+
       <!-- AI 日報摘要卡 -->
       <div class="card p-5 bg-gradient-to-br from-slate-800 to-slate-900 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full -translate-y-8 translate-x-8"></div>
@@ -181,11 +190,18 @@
 
       <!-- 今日事件時間軸 -->
       <div class="card p-5 flex-1">
-        <div class="flex items-center gap-2 mb-4">
+        <div class="flex items-center gap-2 mb-3">
           <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">今日事件時間軸</h3>
           <span class="ml-auto text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30" id="timelineDate"></span>
         </div>
-        <div class="relative" id="timeline"></div>
+        <!-- 篩選欄 -->
+        <div class="flex flex-wrap gap-1.5 mb-4">
+          <button onclick="filterTimeline('all')" class="tl-filter active text-[11px] px-2.5 py-1 rounded-full bg-slate-600 text-white font-bold border border-slate-500">全部</button>
+          <button onclick="filterTimeline('interaction')" class="tl-filter text-[11px] px-2.5 py-1 rounded-full bg-slate-700/50 text-slate-400 font-bold border border-slate-600/50 hover:text-white">💬 對話</button>
+          <button onclick="filterTimeline('health')" class="tl-filter text-[11px] px-2.5 py-1 rounded-full bg-slate-700/50 text-slate-400 font-bold border border-slate-600/50 hover:text-white">🏥 健康</button>
+          <button onclick="filterTimeline('activity')" class="tl-filter text-[11px] px-2.5 py-1 rounded-full bg-slate-700/50 text-slate-400 font-bold border border-slate-600/50 hover:text-white">🚶 活動</button>
+        </div>
+        <div class="relative overflow-y-auto max-h-[500px]" id="timeline"></div>
       </div>
 
       <!-- 狀態總覽 mini 卡 -->
@@ -211,25 +227,25 @@ const API_BASE = '';
 //  備用假資料（API 連不上時自動使用）
 // ══════════════════════════════════════════
 const FALLBACK_DATA = {
-  "elder_id": "elder_001",
+  "elder_id": "",
   "personal_info": {
-    "name": "阿香婆婆",
-    "nickname": "阿香",
-    "age": 75,
-    "location": "宜蘭縣"
+    "name": "尚未註冊",
+    "nickname": "",
+    "age": null,
+    "location": ""
   },
   "localization_settings": {
-    "primary_language": "客家語"
+    "primary_language": "中文"
   },
   "care_baseline": {
-    "chronic_diseases": ["高血壓", "糖尿病"],
-    "core_emotional_need": "子女在竹科工作較少返鄉，容易感到孤單。"
+    "chronic_diseases": [],
+    "core_emotional_need": ""
   },
   "medication_tracker": {
-    "prescription_name": "降血壓藥 (脈優)",
-    "compliance_rate_this_week": 0.95
+    "prescription_name": "",
+    "compliance_rate_this_week": 0
   },
-  "report_date": "2026-07-20",
+  "report_date": "",
   "today_summary": {
     "text": "系統等待中...",
     "metrics": {
@@ -253,14 +269,29 @@ const FALLBACK_DATA = {
 //  從 API 載入資料，失敗則用假資料
 // ══════════════════════════════════════════
 async function loadData() {
+  // 從 localStorage 取得當前長者 ID（由語音互動頁面註冊時寫入）
+  const currentElderId = localStorage.getItem('active_elder_id');
+  if (!currentElderId) {
+    console.warn('⚠️ 尚未註冊任何長者，使用備用假資料');
+    return FALLBACK_DATA;
+  }
+  
   try {
-    const res = await fetch(`${API_BASE}/api/elder/elder_001`, { signal: AbortSignal.timeout(5000) });
+    const sessionToken = localStorage.getItem('session_token') || '';
+    const res = await fetch(`${API_BASE}/api/elder/${currentElderId}`, { 
+      headers: { 'Authorization': `Bearer ${sessionToken}` },
+      signal: AbortSignal.timeout(5000) 
+    });
+    if (res.status === 401 || res.status === 403) {
+      console.warn('⚠️ 存取被拒絕，請重新登入');
+      return FALLBACK_DATA;
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const raw = await res.json();
 
     // 直接使用新格式回傳
     return {
-      elder_id: raw.elder_id || "elder_001",
+      elder_id: raw.elder_id || currentElderId,
       personal_info: raw.personal_info || FALLBACK_DATA.personal_info,
       localization_settings: raw.localization_settings || FALLBACK_DATA.localization_settings,
       care_baseline: raw.care_baseline || FALLBACK_DATA.care_baseline,
@@ -269,6 +300,7 @@ async function loadData() {
       today_summary: raw.today_summary || FALLBACK_DATA.today_summary,
       interaction_stats: raw.interaction_stats || FALLBACK_DATA.interaction_stats,
       timeline_events: raw.timeline_events || FALLBACK_DATA.timeline_events,
+      emotion_summary: raw.emotion_summary || {},
     };
   } catch (err) {
     console.warn('⚠️ API 連線失敗，使用備用假資料：', err.message);
@@ -282,14 +314,18 @@ async function loadData() {
 async function init() {
   const DATA = await loadData();
 
-  // ── 輔助函式 ──
-  function fmt(dt) {
+  // ── 輔助函式（全域化，供 renderTimeline 使用）──
+  window._fmt = function(dt) {
     const d = new Date(dt);
     if (isNaN(d.getTime())) {
-      return dt.substring(dt.indexOf('T') + 1, dt.lastIndexOf(':')) || dt;
+      if (typeof dt === 'string' && dt.includes('T')) {
+        return dt.substring(dt.indexOf('T') + 1, dt.indexOf('T') + 6) || dt;
+      }
+      return dt || '--:--';
     }
     return d.toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', hour12:false});
-  }
+  };
+  const fmt = window._fmt;
   function fmtDate(str) {
     if (!str) return '日期未知';
     const parts = str.split(/[-/]/);
@@ -298,7 +334,7 @@ async function init() {
     return `${y} 年 ${m} 月 ${d} 日`;
   }
 
-  const typeConfig = {
+  const typeConfig = window._typeConfig = {
     health:      { icon:'💊', color:'text-emerald-400', bg:'bg-emerald-500/10', border:'border-emerald-500/40', dot:'bg-emerald-400' },
     interaction: { icon:'🤖', color:'text-violet-400',  bg:'bg-violet-500/10',  border:'border-violet-500/40',  dot:'bg-violet-400' },
     activity:    { icon:'🚶', color:'text-sky-400',     bg:'bg-sky-500/10',     border:'border-sky-500/40',    dot:'bg-sky-400' },
@@ -307,6 +343,7 @@ async function init() {
     '用藥提醒':   { icon:'💊', color:'text-emerald-400', bg:'bg-emerald-500/10', border:'border-emerald-500/40', dot:'bg-emerald-400' },
     '日常活動':   { icon:'🚶', color:'text-sky-400',     bg:'bg-sky-500/10',     border:'border-sky-500/40',    dot:'bg-sky-400' },
     '健康警訊':   { icon:'⚠️', color:'text-amber-400',  bg:'bg-amber-500/10',   border:'border-amber-500/40',  dot:'bg-amber-400' },
+    '健康紀錄':   { icon:'📋', color:'text-emerald-400', bg:'bg-emerald-500/10', border:'border-emerald-500/40', dot:'bg-emerald-400' },
   };
   const structuredConfig = {
     diet:       { icon:'🍚', label:'飲食' },
@@ -325,10 +362,13 @@ async function init() {
   document.getElementById('elderLocation').textContent = p.location || '未設定';
   document.getElementById('elderLang').textContent = DATA.localization_settings?.primary_language || '中文';
   document.getElementById('elderNotes').textContent = '📝 ' + (care.core_emotional_need || '暫無備註');
+  // 根據性別設定頭像
+  const genderEmoji = p.gender === 'male' ? '👴' : (p.gender === 'female' ? '👵' : '👤');
+  document.getElementById('elderEmoji').textContent = genderEmoji;
 
-  // 慢性疾病標籤
+  // 疾病標籤
   document.getElementById('elderHealth').innerHTML = '';
-  (care.chronic_diseases || []).forEach(s => {
+  (care.chronic_diseases || care.diseases || []).forEach(s => {
     document.getElementById('elderHealth').insertAdjacentHTML('beforeend',
       `<span class="px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs">${s}</span>`);
   });
@@ -342,19 +382,111 @@ async function init() {
   document.getElementById('structuredData').innerHTML = '';
   const metrics = summary.metrics || {};
   const metricMap = {
-    diet: metrics.diet,
-    sleep: metrics.sleep,
-    medication: metrics.medication_taken ? `已服藥（${metrics.medication_time || '時間未記錄'}）` : '尚未服藥',
+    diet: metrics.diet || '今日尚未記錄飲食',
+    activity: metrics.activity || '今日尚未記錄活動',
+    sleep: metrics.sleep || '今日尚未記錄睡眠',
+    medication: metrics.medication || (metrics.medication_taken ? `已服藥（${metrics.medication_name || '藥物'}）` : '今日尚未記錄用藥'),
   };
+
+  // 從時間軸取得各類別的詳細歷史紀錄（從對話內容匹配關鍵詞）
+  const _allEvts = DATA.timeline_events || [];
+  const detailMap = {
+    diet: _allEvts.filter(ev => {
+      const d = ev.description || '';
+      return (ev.title && ev.title.includes('飲食')) || 
+             (/粥|麵|飯|菜|肉|湯|水果|牛奶|茶|豆漿|果汁|吐司|蛋|便當|餅/.test(d));
+    }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
+    activity: _allEvts.filter(ev => {
+      const d = ev.description || '';
+      return ev.type === 'activity' || (ev.title && ev.title.includes('活動')) ||
+             (/散步|運動|看電視|種菜|煮飯|打掃|出門|逛|公園/.test(d));
+    }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
+    sleep: _allEvts.filter(ev => {
+      const d = ev.description || '';
+      return (ev.title && ev.title.includes('睡眠')) || (/睡|失眠|午覺|醒/.test(d));
+    }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
+    medication: _allEvts.filter(ev => {
+      const d = ev.description || '';
+      return (ev.title && (ev.title.includes('用藥') || ev.title.includes('服藥'))) ||
+             (/藥|服藥|吃藥/.test(d));
+    }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
+  };
+
   Object.entries(metricMap).forEach(([key, val]) => {
     const cfg = structuredConfig[key];
-    if (!cfg || !val) return;
+    if (!cfg) return;
+    const displayVal = val.replace(/\n/g, '<br>');
+    const details = detailMap[key] || '';
+    const hasDetails = details.length > 0;
+    const detailHtml = hasDetails 
+      ? `<div class="detail-section hidden mt-2 pt-2 border-t border-slate-600/50">
+           <p class="text-[11px] text-slate-500 mb-1 font-bold">詳細紀錄來源：</p>
+           <p class="text-xs text-slate-400 leading-relaxed">${details.replace(/\n/g, '<br>')}</p>
+         </div>
+         <button onclick="this.previousElementSibling.classList.toggle('hidden'); this.textContent = this.textContent === '▼ 展開詳細紀錄' ? '▲ 收合' : '▼ 展開詳細紀錄';" 
+                 class="text-[11px] text-cyan-400 hover:text-cyan-300 mt-2 font-bold cursor-pointer">▼ 展開詳細紀錄</button>`
+      : '';
     document.getElementById('structuredData').insertAdjacentHTML('beforeend', `
       <div class="rounded-xl bg-slate-700/50 border border-slate-600/50 p-3">
         <div class="text-xs font-bold text-slate-400 mb-1.5">${cfg.icon} ${cfg.label}</div>
-        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">${val}</p>
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">${displayVal}</p>
+        ${detailHtml}
       </div>`);
   });
+
+  // ── 今日心情（從 metrics 的 emotion 欄位讀取）──
+  const emotionMap = {
+    '開心': { emoji: '😊' },
+    '難過': { emoji: '😢' },
+    '生氣': { emoji: '😠' },
+    '恐懼': { emoji: '😰' },
+    '吃驚': { emoji: '😲' },
+    '厭惡': { emoji: '😣' },
+    '未檢測': { emoji: '❓' },
+  };
+  const currentEmotion = metrics.emotion || metrics.latest_emotion || '未檢測';
+  const emotionReason = metrics.emotion_reason || '';
+  const moodInfo = emotionMap[currentEmotion] || emotionMap['未檢測'];
+
+  // 心情趨勢圖
+  const emotionHistory = DATA.emotion_history || [];
+  if (emotionHistory.length > 1) {
+    document.getElementById('emotionTrendEmpty').style.display = 'none';
+    document.getElementById('emotionTrendChart').style.display = '';
+    const emoValueMap = { '開心': 5, '吃驚': 4, '中立': 3, '難過': 2, '生氣': 1, '恐懼': 1, '厭惡': 1, '未檢測': 3 };
+    const recent = emotionHistory.slice(0, 20).reverse();
+    const labels = recent.map(r => {
+      const d = new Date(r.time);
+      return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+    });
+    const values = recent.map(r => emoValueMap[r.emotion] || 3);
+    
+    new Chart(document.getElementById('emotionTrendChart'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          borderColor: 'rgba(96,165,250,0.8)',
+          backgroundColor: 'rgba(96,165,250,0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3,
+          pointBackgroundColor: values.map(v => v >= 4 ? '#4ade80' : v <= 2 ? '#f87171' : '#94a3b8'),
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: { label: ctx => recent[ctx.dataIndex]?.emotion || '' }
+        }},
+        scales: {
+          x: { display: false },
+          y: { min: 0, max: 6, display: false }
+        }
+      }
+    });
+  }
 
   // ── 本週互動統計 ──
   const stats = DATA.interaction_stats;
@@ -391,25 +523,95 @@ async function init() {
 
   // ── 時間軸 ──
   document.getElementById('timelineDate').textContent = fmtDate(DATA.report_date);
+  window._allTimelineEvents = DATA.timeline_events || [];
+  renderTimeline('all');
+}
+
+// 時間軸篩選功能
+function filterTimeline(type) {
+  // 更新按鈕樣式
+  document.querySelectorAll('.tl-filter').forEach(btn => {
+    btn.classList.remove('active', 'bg-slate-600', 'text-white');
+    btn.classList.add('bg-slate-700/50', 'text-slate-400');
+  });
+  event.currentTarget.classList.add('active', 'bg-slate-600', 'text-white');
+  event.currentTarget.classList.remove('bg-slate-700/50', 'text-slate-400');
+  renderTimeline(type);
+}
+
+function renderTimeline(filterType) {
+  const fmt = window._fmt || (t => t || '--:--');
   const tlContainer = document.getElementById('timeline');
   tlContainer.innerHTML = '';
-  (DATA.timeline_events || []).forEach((ev, i) => {
-    const cfg = typeConfig[ev.type] || typeConfig.interaction;
-    const isLast = i === DATA.timeline_events.length - 1;
+  
+  let events = window._allTimelineEvents || [];
+  
+  // 篩選
+  if (filterType !== 'all') {
+    events = events.filter(ev => ev.type === filterType);
+  }
+  
+  // 排序：最新的在上面（時間降序）
+  events = [...events].sort((a, b) => {
+    const ta = new Date(a.time || 0).getTime();
+    const tb = new Date(b.time || 0).getTime();
+    return tb - ta;
+  });
+
+  if (events.length === 0) {
+    tlContainer.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">暫無此類事件</p>';
+    return;
+  }
+
+  events.forEach((ev, i) => {
+    const typeConfig = window._typeConfig || {};
+    const cfg = typeConfig[ev.type] || typeConfig.interaction || { icon:'💬', color:'text-slate-400', bg:'bg-slate-500/10', border:'border-slate-500/40' };
+    const isLast = i === events.length - 1;
+    
+    // 對話類型：將使用者和 AI 分開顯示
+    let contentHtml = '';
+    if (ev.type === 'interaction' && ev.description) {
+      const lines = ev.description.split('\n');
+      const userLine = lines.find(l => l.startsWith('長者說：') || l.startsWith('長者：'));
+      const aiLine = lines.find(l => l.startsWith('AI回覆：') || l.startsWith('助理：') || l.startsWith('小黃：'));
+      
+      if (userLine || aiLine) {
+        contentHtml = '<div class="space-y-1.5 mt-1">';
+        if (userLine) {
+          contentHtml += `<div class="flex gap-2 items-start">
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 font-bold">長者</span>
+            <p class="text-xs text-slate-300 leading-relaxed">${userLine.replace(/^(長者說：|長者：)/, '')}</p>
+          </div>`;
+        }
+        if (aiLine) {
+          contentHtml += `<div class="flex gap-2 items-start">
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0 font-bold">小黃</span>
+            <p class="text-xs text-slate-300 leading-relaxed">${aiLine.replace(/^(AI回覆：|助理：|小黃：)/, '')}</p>
+          </div>`;
+        }
+        contentHtml += '</div>';
+      } else {
+        contentHtml = `<p class="text-xs sm:text-sm text-slate-400 leading-relaxed">${ev.description}</p>`;
+      }
+    } else {
+      contentHtml = `<p class="text-xs sm:text-sm text-slate-400 leading-relaxed">${ev.description || ''}</p>`;
+    }
+    
     tlContainer.insertAdjacentHTML('beforeend', `
-      <div class="relative flex gap-4 pb-${isLast ? '0' : '6'}">
+      <div class="relative flex gap-4 pb-${isLast ? '0' : '5'}">
         ${!isLast ? '<div class="timeline-line"></div>' : ''}
-        <div class="relative z-10 w-10 h-10 rounded-full ${cfg.bg} border ${cfg.border} flex items-center justify-center text-lg shrink-0">${cfg.icon}</div>
-        <div class="flex-1 min-w-0 pt-1">
+        <div class="relative z-10 w-9 h-9 rounded-full ${cfg.bg} border ${cfg.border} flex items-center justify-center text-base shrink-0">${cfg.icon}</div>
+        <div class="flex-1 min-w-0 pt-0.5">
           <div class="flex items-center gap-2 flex-wrap mb-1">
-            <span class="text-xs font-bold text-slate-300">${fmt(ev.time || '')}</span>
-            <span class="text-xs px-1.5 py-0.5 rounded-full border bg-sky-500/20 text-sky-300 border-sky-500/30">${ev.type || '互動'}</span>
+            <span class="text-[11px] font-bold text-slate-300">${fmt(ev.time || '')}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded-full border ${cfg.bg} ${cfg.color} ${cfg.border}">${{'interaction':'對話','health':'健康','activity':'活動'}[ev.type] || ev.type || '互動'}</span>
           </div>
-          <div class="font-bold text-sm text-white mb-0.5">${ev.title || ''}</div>
-          <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">${ev.description || ''}</p>
+          <div class="font-bold text-xs text-white mb-0.5">${ev.title || ''}</div>
+          ${contentHtml}
         </div>
       </div>`);
   });
+
 /*
   // ── Mini 統計卡（右下） ──
   document.getElementById('miniStats').innerHTML = '';
@@ -542,27 +744,65 @@ async function refreshDashboard() {
     }
     if (dateEl) dateEl.textContent = fmtDate(newData.report_date);
 
-    // 更新結構化記錄
+    // 更新結構化記錄（與首次渲染保持一致）
     const sdContainer = document.getElementById('structuredData');
     if (sdContainer && summary.metrics) {
       sdContainer.innerHTML = '';
       const structuredConfig = {
         diet: { icon:'🍚', label:'飲食' },
+        activity: { icon:'🏃', label:'活動' },
         sleep: { icon:'😴', label:'睡眠' },
         medication: { icon:'💊', label:'用藥' },
       };
+      const metrics = summary.metrics;
       const metricMap = {
-        diet: summary.metrics.diet,
-        sleep: summary.metrics.sleep,
-        medication: summary.metrics.medication_taken ? `已服藥（${summary.metrics.medication_time || ''}）` : '尚未服藥',
+        diet: metrics.diet || '今日尚未記錄飲食',
+        activity: metrics.activity || '今日尚未記錄活動',
+        sleep: metrics.sleep || '今日尚未記錄睡眠',
+        medication: metrics.medication || (metrics.medication_taken ? `已服藥（${metrics.medication_name || '藥物'}）` : '今日尚未記錄用藥'),
+      };
+      const fmt = window._fmt || (t => '--:--');
+      const _rEvts = newData.timeline_events || [];
+      const detailMap = {
+        diet: _rEvts.filter(ev => {
+          const d = ev.description || '';
+          return (ev.title && ev.title.includes('飲食')) || 
+                 (/粥|麵|飯|菜|肉|湯|水果|牛奶|茶|豆漿|果汁|吐司|蛋|便當|餅/.test(d));
+        }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
+        activity: _rEvts.filter(ev => {
+          const d = ev.description || '';
+          return ev.type === 'activity' || (ev.title && ev.title.includes('活動')) ||
+                 (/散步|運動|看電視|種菜|煮飯|打掃|出門|逛|公園/.test(d));
+        }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
+        sleep: _rEvts.filter(ev => {
+          const d = ev.description || '';
+          return (ev.title && ev.title.includes('睡眠')) || (/睡|失眠|午覺|醒/.test(d));
+        }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
+        medication: _rEvts.filter(ev => {
+          const d = ev.description || '';
+          return (ev.title && (ev.title.includes('用藥') || ev.title.includes('服藥'))) ||
+                 (/藥|服藥|吃藥/.test(d));
+        }).map(ev => `📌 ${fmt(ev.time)} — ${ev.description || ev.title}`).join('\n'),
       };
       Object.entries(metricMap).forEach(([key, val]) => {
         const cfg = structuredConfig[key];
-        if (!cfg || !val) return;
+        if (!cfg) return;
+        const displayVal = val.replace(/\n/g, '<br>');
+        const details = detailMap[key] || '';
+        const hasDetails = details.length > 0;
+        const detailHtml = hasDetails 
+          ? `<div class="detail-section hidden mt-2 pt-2 border-t border-slate-600/50">
+               <p class="text-[11px] text-slate-500 mb-1 font-bold">詳細紀錄來源：</p>
+               <p class="text-xs text-slate-400 leading-relaxed">${details.replace(/\n/g, '<br>')}</p>
+             </div>
+             <button onclick="this.previousElementSibling.classList.toggle('hidden'); this.textContent = this.textContent === '▼ 展開詳細紀錄' ? '▲ 收合' : '▼ 展開詳細紀錄';" 
+                     class="text-[11px] text-cyan-400 hover:text-cyan-300 mt-2 font-bold cursor-pointer">▼ 展開詳細紀錄</button>`
+          : '';
         sdContainer.insertAdjacentHTML('beforeend', `
           <div class="rounded-xl bg-slate-700/50 border border-slate-600/50 p-3">
             <div class="text-xs font-bold text-slate-400 mb-1.5">${cfg.icon} ${cfg.label}</div>
-            <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">${val}</p>
+            <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">${displayVal}</p>
+            ${detailHtml}
           </div>`);
       });
     }
@@ -572,34 +812,16 @@ async function refreshDashboard() {
     if (weeklyEl) weeklyEl.textContent = newData.interaction_stats?.total_turns || 0;
 
     // 更新時間軸
-    const tlContainer = document.getElementById('timeline');
-    if (tlContainer && newData.timeline_events?.length) {
-      const typeConfig = {
-        health: { icon:'💊', bg:'bg-emerald-500/10', border:'border-emerald-500/40' },
-        interaction: { icon:'🤖', bg:'bg-violet-500/10', border:'border-violet-500/40' },
-        activity: { icon:'🚶', bg:'bg-sky-500/10', border:'border-sky-500/40' },
-        alert: { icon:'⚠️', bg:'bg-amber-500/10', border:'border-amber-500/40' },
-      };
-
-      tlContainer.innerHTML = '';
-      newData.timeline_events.slice(0, 8).forEach((ev, i) => {
-        const cfg = typeConfig[ev.type] || typeConfig.interaction;
-        const isLast = i === Math.min(newData.timeline_events.length, 8) - 1;
-        const timeStr = ev.time ? new Date(ev.time).toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', hour12:false}) : '--:--';
-        tlContainer.insertAdjacentHTML('beforeend', `
-          <div class="relative flex gap-4 pb-${isLast ? '0' : '6'}">
-            ${!isLast ? '<div class="timeline-line"></div>' : ''}
-            <div class="relative z-10 w-10 h-10 rounded-full ${cfg.bg} border ${cfg.border} flex items-center justify-center text-lg shrink-0">${cfg.icon}</div>
-            <div class="flex-1 min-w-0 pt-1">
-              <div class="flex items-center gap-2 flex-wrap mb-1">
-                <span class="text-xs font-bold text-slate-300">${timeStr}</span>
-                <span class="text-xs px-1.5 py-0.5 rounded-full border bg-sky-500/20 text-sky-300 border-sky-500/30">${ev.type || '互動'}</span>
-              </div>
-              <div class="font-bold text-sm text-white mb-0.5">${ev.title || '語音互動'}</div>
-              <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">${ev.description || ''}</p>
-            </div>
-          </div>`);
+    if (newData.timeline_events?.length) {
+      window._allTimelineEvents = newData.timeline_events;
+      renderTimeline('all');
+      // 重置篩選按鈕到「全部」
+      document.querySelectorAll('.tl-filter').forEach(btn => {
+        btn.classList.remove('active', 'bg-slate-600', 'text-white');
+        btn.classList.add('bg-slate-700/50', 'text-slate-400');
       });
+      const allBtn = document.querySelector('.tl-filter');
+      if (allBtn) { allBtn.classList.add('active', 'bg-slate-600', 'text-white'); allBtn.classList.remove('bg-slate-700/50', 'text-slate-400'); }
     }
 
     console.log('[Dashboard] 資料已即時刷新');
@@ -620,8 +842,7 @@ function fmtDate(str) {
 // ── 啟動 SSE 連線 ──
 connectSSE();
 
-// ── 備援：每 30 秒自動輪詢一次（防止 SSE 斷線時看板不更新）──
-setInterval(refreshDashboard, 30000);
+// ── 不自動輪詢，只有收到新互動事件時才刷新 ──
 </script>
 </body>
 </html>

@@ -61,7 +61,7 @@ ASR_SILENCE_FRAME_MS = int(os.getenv("ASR_SILENCE_FRAME_MS", "30"))
 # ═══════════════════════════════════════════════════════
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma2:2b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
 
 # ═══════════════════════════════════════════════════════
 # TTS 語音合成設定
@@ -98,9 +98,12 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 
 # 提示詞目錄
 PROMPTS_DIR = os.path.join(BASE_DIR, "prompts")
-SYSTEM_PROMPT_PATH = os.path.join(PROMPTS_DIR, "system_prompt.txt")
+SYSTEM_PROMPT_PATH = os.path.join(PROMPTS_DIR, "chat_prompt.txt")
 ENVIRONMENTAL_PROMPTS_PATH = os.path.join(PROMPTS_DIR, "Environmental_Prompts.txt")
 LIFE_RECORDS_PROMPT_PATH = os.path.join(PROMPTS_DIR, "life_records_prompt.txt")
+HEALTH_ANALYSIS_PROMPT_PATH = os.path.join(PROMPTS_DIR, "health_analysis_prompt.txt")
+FAREWELL_DETECTION_PROMPT_PATH = os.path.join(PROMPTS_DIR, "farewell_detection_prompt.txt")
+MEMORY_IMPORTANCE_PROMPT_PATH = os.path.join(PROMPTS_DIR, "memory_importance_prompt.txt")
 
 # 天氣 API Key
 WEATHER_API_KEY_PATH = os.path.join(BASE_DIR, "api_key.txt")

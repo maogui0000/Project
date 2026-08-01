@@ -17,7 +17,7 @@ data_manager.py
 
 import json
 import os
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Optional
 
 import config
@@ -28,8 +28,19 @@ import config
 # ═══════════════════════════════════════════════════════
 DATA_DIR = os.path.join(config.BASE_DIR, "data")
 
-# 短期記憶中每筆對話的存活輪數（新對話初始壽命，每次新互動全部 -1，歸 0 則刪除）
-MAX_DIALOGUE_TURNS = 10
+# 短期記憶 TTL 設定（時間制）
+# 一般對話：30 分鐘後過期
+# 重要對話（用藥、健康等）：120 分鐘後過期
+# 極重要對話（跌倒、求救）：240 分鐘後過期
+SHORT_TERM_TTL_MINUTES = {
+    "low": 30,       # 不重要對話 TTL：30 分鐘
+    "normal": 60,    # 一般對話 TTL：60 分鐘
+    "high": 120,     # 重要對話 TTL：120 分鐘（2 小時）
+    "critical": 240, # 極重要對話 TTL：240 分鐘（4 小時）
+}
+
+# Session 閒置超時（秒）：超過此時間視為 Session 結束，觸發背景記憶分析
+SESSION_IDLE_TIMEOUT_SECONDS = 120  # 2 分鐘
 
 
 def _get_elder_data_dir(elder_id: str = "elder_001") -> str:
@@ -48,11 +59,11 @@ def _get_paths(elder_id: str = "elder_001") -> dict:
     }
 
 
-# 預設路徑（向後相容，供其他模組直接 import 用）
-PROFILE_PATH = os.path.join(DATA_DIR, "elder_001", "elder_profile.json")
-LONG_TERM_PATH = os.path.join(DATA_DIR, "elder_001", "long_term_memory.json")
-SHORT_TERM_PATH = os.path.join(DATA_DIR, "elder_001", "short_term_memory.json")
-DASHBOARD_PATH = os.path.join(DATA_DIR, "elder_001", "dashboard_logs.json")
+# 預設路徑（已棄用，保留僅為避免舊模組 import 報錯）
+PROFILE_PATH = None
+LONG_TERM_PATH = None
+SHORT_TERM_PATH = None
+DASHBOARD_PATH = None
 
 
 class DataManager:
@@ -66,6 +77,7 @@ class DataManager:
         self.long_term_path = paths["long_term"]
         self.short_term_path = paths["short_term"]
         self.dashboard_path = paths["dashboard"]
+        self.reminders_path = os.path.join(self.elder_dir, "reminders.json")
         os.makedirs(self.elder_dir, exist_ok=True)
         self._ensure_files_exist()
 
@@ -85,16 +97,53 @@ class DataManager:
             self.profile_path: {
                 "elder_id": self.elder_id,
                 "meta": {"created_at": datetime.now().isoformat(), "last_updated": datetime.now().isoformat()},
-                "personal_info": {"name": "長輩", "nickname": "", "gender": "", "age": None, "birth_year": None, "location": ""},
-                "localization_settings": {"primary_language": "中文", "secondary_language": "", "tts_accent": "台灣國語腔調", "persona_relation": "貼心孝順的晚輩"},
-                "care_baseline": {"diseases": [], "emergency_contact": "", "core_emotional_need": ""}
+                "personal_info": {
+                    "name": "",
+                    "nickname": "",
+                    "gender": "",
+                    "age": None,
+                    "birth_year": None,
+                    "location": "",
+                    "health_insurance_id": ""
+                },
+                "emergency_contact": {
+                    "name": "",
+                    "relationship": "",
+                    "phone": "",
+                    "phone_2": ""
+                },
+                "medical_safety": {
+                    "drug_allergies": [],
+                    "food_allergies": [],
+                    "chronic_diseases": [],
+                    "current_medications": [],
+                    "medication_schedule": {}
+                },
+                "physical_care": {
+                    "mobility": "",
+                    "swallowing_ability": "",
+                    "dietary_restrictions": [],
+                    "toileting_status": ""
+                },
+                "mental_cognitive": {
+                    "has_dementia": False,
+                    "dementia_level": "",
+                    "has_wandering_history": False,
+                    "emotional_traits": "",
+                    "cognitive_notes": ""
+                },
+                "localization_settings": {
+                    "primary_language": "中文",
+                    "secondary_language": "",
+                    "tts_accent": "台灣國語腔調",
+                    "persona_relation": "貼心孝順的晚輩"
+                }
             },
             self.long_term_path: {
                 "elder_id": self.elder_id,
                 "meta": {"last_analyzed_at": None},
-                "extracted_preferences": {"likes": [], "dislikes": []},
-                "historical_habits": {"morning_routine": "", "afternoon_routine": ""},
-                "medication_tracker": {"prescription_name": "", "requirement": "", "compliance_rate_this_week": 0.0}
+                "records": [],
+                "emotion_history": []
             },
             self.short_term_path: {
                 "elder_id": self.elder_id,
@@ -114,50 +163,263 @@ class DataManager:
         for path, default_data in defaults.items():
             if not os.path.exists(path) or os.stat(path).st_size == 0:
                 self._save(path, default_data)
+        # reminders.json 單獨處理
+        if not os.path.exists(self.reminders_path) or os.stat(self.reminders_path).st_size == 0:
+            self._save(self.reminders_path, {"elder_id": self.elder_id, "reminders": []})
 
     # ═══════════════════════════════════════════════════
     # 1. Elder Profile（長輩基本資料）
     # ═══════════════════════════════════════════════════
 
     def get_profile(self) -> dict:
-        return self._load(self.profile_path)
+        data = self._load(self.profile_path)
+        # 相容遷移：若舊資料有 care_baseline，自動遷移到新結構
+        if "care_baseline" in data:
+            old = data.pop("care_baseline")
+            # 遷移慢性病到 medical_safety
+            if "medical_safety" not in data:
+                data["medical_safety"] = {"drug_allergies": [], "food_allergies": [], "chronic_diseases": [], "current_medications": [], "medication_schedule": {}}
+            diseases = old.get("chronic_diseases", old.get("diseases", []))
+            if diseases:
+                data["medical_safety"]["chronic_diseases"] = diseases
+            # 遷移緊急聯絡人
+            if "emergency_contact" not in data:
+                data["emergency_contact"] = {"name": "", "relationship": "", "phone": "", "phone_2": ""}
+            if old.get("emergency_contact"):
+                data["emergency_contact"]["phone"] = old["emergency_contact"]
+            data["meta"]["last_updated"] = datetime.now().isoformat()
+            self._save(self.profile_path, data)
+        return data
 
     def update_profile(self, **kwargs):
         """更新 personal_info 中的欄位"""
         data = self._load(self.profile_path)
+        if "personal_info" not in data:
+            data["personal_info"] = {}
         for key, val in kwargs.items():
-            if key in data["personal_info"]:
+            if key in data.get("personal_info", {}):
                 data["personal_info"][key] = val
         data["meta"]["last_updated"] = datetime.now().isoformat()
         self._save(self.profile_path, data)
 
     def update_care_baseline(self, **kwargs):
-        """更新 care_baseline 中的欄位"""
+        """更新醫療安全資訊（相容舊介面，實際寫入 medical_safety）"""
         data = self._load(self.profile_path)
+        # 相容處理：若傳入 diseases，對應到 chronic_diseases
+        if "diseases" in kwargs:
+            kwargs["chronic_diseases"] = kwargs.pop("diseases")
+        # 相容處理：core_emotional_need 對應到 mental_cognitive.emotional_traits
+        if "core_emotional_need" in kwargs:
+            emotional_note = kwargs.pop("core_emotional_need")
+            if emotional_note:
+                if "mental_cognitive" not in data:
+                    data["mental_cognitive"] = {"has_dementia": False, "dementia_level": "", "has_wandering_history": False, "emotional_traits": "", "cognitive_notes": ""}
+                data["mental_cognitive"]["cognitive_notes"] = emotional_note
+        # 確保 medical_safety 區塊存在
+        if "medical_safety" not in data:
+            data["medical_safety"] = {"drug_allergies": [], "food_allergies": [], "chronic_diseases": [], "current_medications": [], "medication_schedule": {}}
         for key, val in kwargs.items():
-            if key in data["care_baseline"]:
-                data["care_baseline"][key] = val
+            if key in data["medical_safety"]:
+                data["medical_safety"][key] = val
+        data["meta"]["last_updated"] = datetime.now().isoformat()
+        self._save(self.profile_path, data)
+
+    def update_medical_safety(self, **kwargs):
+        """更新醫療與用藥安全資訊"""
+        data = self._load(self.profile_path)
+        if "medical_safety" not in data:
+            data["medical_safety"] = {"drug_allergies": [], "food_allergies": [], "chronic_diseases": [], "current_medications": [], "medication_schedule": {}}
+        for key, val in kwargs.items():
+            data["medical_safety"][key] = val
+        data["meta"]["last_updated"] = datetime.now().isoformat()
+        self._save(self.profile_path, data)
+
+    def update_physical_care(self, **kwargs):
+        """更新生理與日常照護資訊"""
+        data = self._load(self.profile_path)
+        if "physical_care" not in data:
+            data["physical_care"] = {"mobility": "", "swallowing_ability": "", "dietary_restrictions": [], "toileting_status": ""}
+        for key, val in kwargs.items():
+            data["physical_care"][key] = val
+        data["meta"]["last_updated"] = datetime.now().isoformat()
+        self._save(self.profile_path, data)
+
+    def update_mental_cognitive(self, **kwargs):
+        """更新精神與認知狀態資訊"""
+        data = self._load(self.profile_path)
+        if "mental_cognitive" not in data:
+            data["mental_cognitive"] = {"has_dementia": False, "dementia_level": "", "has_wandering_history": False, "emotional_traits": "", "cognitive_notes": ""}
+        for key, val in kwargs.items():
+            data["mental_cognitive"][key] = val
+        data["meta"]["last_updated"] = datetime.now().isoformat()
+        self._save(self.profile_path, data)
+
+    def update_emergency_contact(self, **kwargs):
+        """更新緊急聯絡人資訊"""
+        data = self._load(self.profile_path)
+        if "emergency_contact" not in data:
+            data["emergency_contact"] = {"name": "", "relationship": "", "phone": "", "phone_2": ""}
+        for key, val in kwargs.items():
+            data["emergency_contact"][key] = val
         data["meta"]["last_updated"] = datetime.now().isoformat()
         self._save(self.profile_path, data)
 
     # ═══════════════════════════════════════════════════
-    # 2. Long-Term Memory（長期記憶）
+    # 2. Long-Term Memory（長期記憶 — 帶 TTL）
     # ═══════════════════════════════════════════════════
 
+    # TTL 對照表（天數）：根據重要程度決定保存多久
+    _LONG_TERM_TTL_DAYS = {
+        "permanent": 99999,  # 永久保存（用藥、疾病等長期資料）
+        "critical": 365,     # 極重要（受傷）：保留 1 年
+        "high": 90,          # 重要（健康症狀、睡眠異常）：保留 3 個月
+        "normal": 30,        # 一般（飲食、活動）：保留 30 天
+        "low": 15,           # 不重要（一般閒聊提取的偏好）：保留 15 天
+    }
+
     def get_long_term_memory(self) -> dict:
-        return self._load(self.long_term_path)
+        data = self._load(self.long_term_path)
+        # 自動清理過期記錄
+        self._cleanup_expired_long_term_records(data)
+        return data
+
+    def _cleanup_expired_long_term_records(self, data: dict):
+        """清理已超過 TTL 的長期記憶記錄"""
+        now = datetime.now()
+        records = data.get("records", [])
+        original_count = len(records)
+        
+        data["records"] = [
+            r for r in records
+            if datetime.fromisoformat(r.get("expires_at", now.isoformat())) > now
+        ]
+        
+        removed = original_count - len(data["records"])
+        if removed > 0:
+            print(f"🗑️ [長期記憶] 清理 {removed} 筆過期記錄")
+            self._save(self.long_term_path, data)
+
+    def add_long_term_record(self, category: str, content: str, importance: str = "normal"):
+        """
+        新增一筆長期記憶記錄（帶 TTL）。
+        
+        category: medication / diet / activity / sleep / symptom / preference / social
+        importance: critical（1年）/ high（3月）/ normal（30天）/ low（15天）
+        """
+        data = self._load(self.long_term_path)
+        if "records" not in data:
+            data["records"] = []
+        
+        ttl_days = self._LONG_TERM_TTL_DAYS.get(importance, 30)
+        expires_at = datetime.now() + timedelta(days=ttl_days)
+        
+        record = {
+            "category": category,
+            "content": content,
+            "importance": importance,
+            "recorded_at": datetime.now().isoformat(),
+            "expires_at": expires_at.isoformat(),
+            "ttl_days": ttl_days,
+        }
+        
+        data["records"].insert(0, record)
+        data["meta"]["last_analyzed_at"] = datetime.now().isoformat()
+        
+        # 限制最大記錄數（防止無限增長）
+        if len(data["records"]) > 200:
+            data["records"] = data["records"][:200]
+        
+        self._save(self.long_term_path, data)
+        print(f"📝 [長期記憶] 新增 [{category}] {content[:30]}（保留 {ttl_days} 天）")
+
+    def get_long_term_summary_text(self) -> str:
+        """將長期記憶轉為文字 prompt，供 LLM 參考"""
+        data = self.get_long_term_memory()
+        records = data.get("records", [])
+        if not records:
+            return ""
+        
+        summary = "\n[長期記憶紀錄（以下為過去的重要資訊）]\n"
+        # 按類別分組顯示，最多顯示最近 20 筆
+        for record in records[:20]:
+            cat = record.get("category", "")
+            content = record.get("content", "")
+            summary += f"- [{cat}] {content}\n"
+        summary += "[長期記憶結束]\n"
+        return summary
 
     def update_medication_compliance(self, taken: bool, time_str: str = None):
-        """記錄用藥狀態"""
+        """記錄用藥狀態（相容舊介面）"""
+        pass  # 用藥記錄改由 add_long_term_record 處理
+
+    def add_emotion_record(self, emotion: str, reason: str = "", confidence: float = 0.0, source: str = "text"):
+        """
+        新增情緒歷史紀錄（用於心情趨勢圖）。
+        
+        source: 'text'（文字判斷）或 'voice'（語音辨識）
+        """
         data = self._load(self.long_term_path)
-        data["meta"]["last_analyzed_at"] = datetime.now().isoformat()
-        # 簡易計算：如果有吃就微調 compliance_rate
-        current_rate = data["medication_tracker"].get("compliance_rate_this_week", 0.0)
-        if taken:
-            data["medication_tracker"]["compliance_rate_this_week"] = min(1.0, current_rate + 0.05)
-        else:
-            data["medication_tracker"]["compliance_rate_this_week"] = max(0.0, current_rate - 0.1)
+        if "emotion_history" not in data:
+            data["emotion_history"] = []
+        
+        record = {
+            "time": datetime.now().isoformat(),
+            "emotion": emotion,
+            "reason": reason[:50] if reason else "",
+            "confidence": round(confidence, 2),
+            "source": source,
+        }
+        data["emotion_history"].insert(0, record)
+        
+        # 最多保留 100 筆（約 1~2 週的資料）
+        if len(data["emotion_history"]) > 100:
+            data["emotion_history"] = data["emotion_history"][:100]
+        
         self._save(self.long_term_path, data)
+
+    def get_emotion_history(self) -> list:
+        """取得情緒歷史紀錄（供趨勢圖使用）"""
+        data = self._load(self.long_term_path)
+        return data.get("emotion_history", [])
+
+    def add_health_record(self, record_type: str, description: str):
+        """新增健康紀錄（相容舊介面，委派給 add_long_term_record）"""
+        importance = "critical" if record_type == "injury" else "high"
+        self.add_long_term_record("symptom", description, importance)
+
+    # ═══════════════════════════════════════════════════
+    # 提醒事項（reminders.json）
+    # ═══════════════════════════════════════════════════
+
+    def add_reminder(self, content: str, requested_by: str = "長者") -> dict:
+        """
+        新增提醒事項。
+        回傳新增的 reminder 物件。
+        """
+        data = self._load(self.reminders_path)
+        if "reminders" not in data:
+            data["reminders"] = []
+        
+        reminder = {
+            "content": content,
+            "requested_by": requested_by,
+            "created_at": datetime.now().isoformat(),
+            "status": "pending",
+            "notified": False,
+        }
+        data["reminders"].insert(0, reminder)
+        
+        # 最多保留 50 筆
+        if len(data["reminders"]) > 50:
+            data["reminders"] = data["reminders"][:50]
+        
+        self._save(self.reminders_path, data)
+        return reminder
+
+    def get_reminders(self) -> list:
+        """取得所有提醒事項"""
+        data = self._load(self.reminders_path)
+        return data.get("reminders", [])
 
     def add_preference(self, category: str, item: str):
         """新增偏好（likes 或 dislikes）"""
@@ -188,7 +450,8 @@ class DataManager:
         return data.get("dialogue_history", [])
 
     def get_history_summary_text(self) -> str:
-        """將短期對話歷史轉為文字 prompt（供 AI 對話使用）"""
+        """將短期對話歷史轉為文字 prompt（供 AI 對話使用），自動過濾已過期對話"""
+        self._cleanup_expired_dialogues()
         history = self.get_dialogue_history()
         if not history:
             return ""
@@ -199,37 +462,73 @@ class DataManager:
         summary += "[歷史紀錄結束，請根據以上脈絡回應以下最新對話]\n"
         return summary
 
-    def add_dialogue_turn(self, user_text: str, ai_reply: str, flagged: bool = False):
-        """
-        新增一輪對話到短期記憶。
-        turn 代表存活剩餘輪數：由 LLM 判斷重要程度決定（1~10）。
-        每次新增時所有舊對話 turn -1，turn <= 0 的刪除。
-        """
+    def _cleanup_expired_dialogues(self):
+        """清理已超過 TTL 過期時間的短期對話"""
         data = self._load(self.short_term_path)
+        now = datetime.now()
+        original_count = len(data["dialogue_history"])
         
-        # 1. 所有既有對話的存活輪數 -1
-        for entry in data["dialogue_history"]:
-            entry["turn"] = entry.get("turn", 1) - 1
-        
-        # 2. 移除存活輪數 <= 0 的過期對話
         data["dialogue_history"] = [
-            entry for entry in data["dialogue_history"] if entry.get("turn", 0) > 0
+            entry for entry in data["dialogue_history"]
+            if datetime.fromisoformat(entry.get("expires_at", now.isoformat())) > now
         ]
         
-        # 3. 用 LLM 判斷本次對話的重要程度（決定存活輪數）
+        removed = original_count - len(data["dialogue_history"])
+        if removed > 0:
+            print(f"🗑️ [TTL] 清理 {removed} 筆過期短期記憶")
+            self._save(self.short_term_path, data)
+
+    def add_dialogue_turn(self, user_text: str, ai_reply: str, flagged: bool = False):
+        """
+        新增一輪對話到短期記憶（時間制 TTL）。
+        
+        TTL 策略：
+        - 由 LLM 判斷重要程度（1~10 分），依分數對應不同過期時間
+        - 1~3 分（不重要）→ 30 分鐘後過期
+        - 4~6 分（一般）  → 60 分鐘後過期
+        - 7~8 分（重要）  → 120 分鐘後過期（2 小時）
+        - 9~10 分（極重要）→ 240 分鐘後過期（4 小時）
+        """
+        data = self._load(self.short_term_path)
+        now = datetime.now()
+        
+        # 1. 清理已過期的對話
+        data["dialogue_history"] = [
+            entry for entry in data["dialogue_history"]
+            if datetime.fromisoformat(entry.get("expires_at", now.isoformat())) > now
+        ]
+        
+        # 2. 用 LLM 判斷本次對話的重要程度（決定 TTL）
         importance = self._evaluate_importance(user_text, ai_reply)
         
-        # 4. 新增本次對話
+        # 3. 根據重要度決定 TTL 分鐘數
+        if importance >= 9:
+            ttl_minutes = SHORT_TERM_TTL_MINUTES["critical"]
+        elif importance >= 7:
+            ttl_minutes = SHORT_TERM_TTL_MINUTES["high"]
+        elif importance >= 4:
+            ttl_minutes = SHORT_TERM_TTL_MINUTES["normal"]
+        else:
+            ttl_minutes = SHORT_TERM_TTL_MINUTES["low"]
+        
+        expires_at = now + timedelta(minutes=ttl_minutes)
+        
+        # 4. 新增本次對話（含明確的過期時間戳）
         data["dialogue_history"].append({
             "turn": importance,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": now.isoformat(),
+            "expires_at": expires_at.isoformat(),
+            "ttl_minutes": ttl_minutes,
             "user": user_text,
             "ai": ai_reply,
             "is_flagged_for_long_term": flagged or (importance >= 8)
         })
         
+        print(f"⏳ [TTL] 新對話存活 {ttl_minutes} 分鐘（重要度 {importance}/10），"
+              f"過期時間：{expires_at.strftime('%H:%M:%S')}")
+        
         # 更新時間
-        data["active_context"]["current_time"] = datetime.now().isoformat()
+        data["active_context"]["current_time"] = now.isoformat()
         self._save(self.short_term_path, data)
 
     def _evaluate_importance(self, user_text: str, ai_reply: str) -> int:
@@ -246,21 +545,19 @@ class DataManager:
             from ollama import chat
             import config
             
-            prompt = f"""你是記憶重要度評分系統。請評估以下長者對話的重要程度，只回傳一個 1~10 的數字。
-
-評分標準：
-- 9~10: 極重要（提到用藥、身體不適、疼痛、跌倒、求救、緊急狀況）
-- 7~8: 重要（飲食內容、睡眠狀況、情緒低落、重要生活事件、家人相關）
-- 4~6: 一般（日常閒聊、分享心情、問候、天氣、一般活動）
-- 1~3: 不重要（無意義的語音、語音辨識錯誤、單字回應、重複問候）
-
-長者說：「{user_text}」
-
-只回傳數字，不要任何解釋："""
+            # 從檔案讀取提示詞
+            try:
+                with open(config.MEMORY_IMPORTANCE_PROMPT_PATH, 'r', encoding='utf-8') as f:
+                    base_prompt = f.read()
+            except Exception:
+                base_prompt = "你是記憶重要度評分系統。只回傳一個 1~10 的數字。"
+            
+            prompt = f"{base_prompt}\n\n長者說：「{user_text}」"
 
             response = chat(
                 model=config.OLLAMA_MODEL,
                 messages=[{"role": "user", "content": prompt}],
+                options={'temperature': 0.0},
                 stream=False,
             )
             
@@ -316,11 +613,33 @@ class DataManager:
         return data
 
     def update_today_summary(self, text: str, metrics: dict = None):
-        """更新今日摘要"""
+        """
+        更新今日摘要（合併模式，不覆蓋已有內容）。
+        - text: 新增摘要文字，會與舊摘要合併（不覆蓋）
+        - metrics: 只更新有值的欄位，空值不覆蓋
+        """
         data = self.get_dashboard_logs()
-        data["today_summary"]["text"] = text
+        
+        # 摘要文字：合併而非覆蓋
+        if text and text.strip():
+            existing_text = data["today_summary"].get("text", "")
+            if existing_text and text.strip() != existing_text.strip():
+                # 合併，用換行分隔，保留最新的在前面
+                data["today_summary"]["text"] = text.strip() + "\n" + existing_text.strip()
+                # 限制最大長度（保留最新的 500 字）
+                if len(data["today_summary"]["text"]) > 500:
+                    data["today_summary"]["text"] = data["today_summary"]["text"][:500]
+            elif not existing_text:
+                data["today_summary"]["text"] = text.strip()
+        
+        # metrics：只更新有值的欄位，None/空字串不覆蓋現有值
         if metrics:
-            data["today_summary"]["metrics"].update(metrics)
+            existing_metrics = data["today_summary"].get("metrics", {})
+            for key, val in metrics.items():
+                if val is not None and val != "":
+                    existing_metrics[key] = val
+            data["today_summary"]["metrics"] = existing_metrics
+        
         self._save(self.dashboard_path, data)
 
     def add_timeline_event(self, event_type: str, title: str, description: str, time_str: str = None):
@@ -371,11 +690,11 @@ class DataManager:
         # 1. 短期記憶
         self.add_dialogue_turn(user_text, ai_reply)
 
-        # 2. 時間軸事件
+        # 2. 時間軸事件（記錄長者說的話和小黃的回覆）
         self.add_timeline_event(
             event_type="interaction",
             title="智慧語音關懷",
-            description=f"長者說：{user_text}\nAI回覆：{ai_reply}"
+            description=f"長者說：{user_text}\n小黃：{ai_reply}"
         )
 
         # 3. 互動計數
@@ -388,21 +707,35 @@ class DataManager:
     def get_full_dashboard_data(self) -> dict:
         """
         供 Dashboard API 一次回傳的完整資料包
-        整合 profile + dashboard_logs
+        整合 profile + dashboard_logs + 情緒摘要
         """
         profile = self.get_profile()
         logs = self.get_dashboard_logs()
         long_term = self.get_long_term_memory()
 
+        # 取得情緒摘要（若可用）
+        emotion_summary = {}
+        try:
+            from speech.emotion_recognition import get_emotion_summary
+            emotion_summary = get_emotion_summary()
+        except Exception:
+            pass
+
         return {
-            "elder_id": profile.get("elder_id", "elder_001"),
+            "elder_id": profile.get("elder_id", ""),
             "personal_info": profile.get("personal_info", {}),
+            "emergency_contact": profile.get("emergency_contact", {}),
+            "medical_safety": profile.get("medical_safety", {}),
+            "physical_care": profile.get("physical_care", {}),
+            "mental_cognitive": profile.get("mental_cognitive", {}),
             "localization_settings": profile.get("localization_settings", {}),
-            "care_baseline": profile.get("care_baseline", {}),
             "medication_tracker": long_term.get("medication_tracker", {}),
+            "health_records": long_term.get("health_records", {}),
             "report_date": logs.get("report_date", ""),
             "today_summary": logs.get("today_summary", {}),
             "interaction_stats": logs.get("interaction_stats", {}),
             "timeline_events": logs.get("timeline_events", []),
             "line_notification_status": logs.get("line_notification_status", {}),
+            "emotion_summary": emotion_summary,
+            "emotion_history": self.get_emotion_history(),
         }

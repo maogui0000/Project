@@ -36,11 +36,13 @@ except Exception as e:
     )
 
 
-def load_context_for_summary() -> str:
+def load_context_for_summary(elder_id: str = None) -> str:
     """
     從 DataManager 撈取今日對話歷史與健康記憶，組成給 AI 分析的素材
     """
-    dm = DataManager()
+    if not elder_id:
+        return ""
+    dm = DataManager(elder_id=elder_id)
 
     pieces = []
 

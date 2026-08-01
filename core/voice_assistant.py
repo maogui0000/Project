@@ -179,7 +179,8 @@ class VoiceAssistant:
                 self._active = False
             print("[語音助理] 對話結束，重新等待喚醒詞")
             if self.running:
-                time.sleep(0.5)
+                # 等待足夠時間確保麥克風/音訊裝置完全釋放
+                time.sleep(1.5)
                 self.detector.resume()
 
     # ── 錄音 ──────────────────────────────────────────
@@ -231,8 +232,21 @@ class VoiceAssistant:
         """短句即時播放（用於喚醒回應、錯誤提示等簡短句子）"""
         print(f"[小黃] {text}")
         try:
-            # 短句直接用 stream_speak 走單句合成播放
-            asyncio.run(synthesize_and_play_sentence(text, None, 0))
+            # 檢查是否已有 event loop 在跑（例如 FastAPI 環境）
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                # 已有 event loop，用 run_coroutine_threadsafe 避免衝突
+                future = asyncio.run_coroutine_threadsafe(
+                    synthesize_and_play_sentence(text, None, 0), loop
+                )
+                future.result(timeout=15)
+            else:
+                # 無 event loop，安全使用 asyncio.run
+                asyncio.run(synthesize_and_play_sentence(text, None, 0))
         except Exception as e:
             print(f"[TTS] 錯誤：{e}")
 

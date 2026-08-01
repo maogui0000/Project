@@ -65,10 +65,10 @@
   <div class="card p-5">
     <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">① 目標長者 ID</h2>
     <div class="flex gap-3">
-      <input id="elderId" type="text" placeholder="例如：elder_001" value="elder_001"/>
+      <input id="elderId" type="text" placeholder="例如：elder_xxxx" value=""/>
       <button class="btn-primary whitespace-nowrap" onclick="setElderId()">設定</button>
     </div>
-    <p class="text-xs text-slate-500 mt-2">目前：<span id="currentId" class="text-cyan-400 font-bold">elder_001</span></p>
+    <p class="text-xs text-slate-500 mt-2">目前：<span id="currentId" class="text-cyan-400 font-bold"></span></p>
   </div>
 
   <!-- 分頁按鈕 -->
@@ -152,9 +152,21 @@
 
 <script>
 const API = '';
-let ELDER_ID = 'elder_001';
+let ELDER_ID = localStorage.getItem('active_elder_id') || '';
 
 // ── 工具函式 ─────────────────────────────
+// 頁面載入時自動填入當前長者 ID
+(function initAdminPage() {
+  const savedId = localStorage.getItem('active_elder_id');
+  if (savedId) {
+    ELDER_ID = savedId;
+    document.getElementById('elderId').value = savedId;
+    document.getElementById('currentId').textContent = savedId;
+  } else {
+    document.getElementById('currentId').textContent = '（尚未註冊）';
+  }
+})();
+
 function setElderId() {
   const val = document.getElementById('elderId').value.trim();
   if (!val) return showToast('❌ ID 不能為空', 'error');

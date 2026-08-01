@@ -50,7 +50,8 @@
     <p class="text-slate-500 text-sm mb-8">請先填寫基本資料，讓小黃更認識您</p>
     
     <!-- 註冊表單 -->
-    <div class="bg-white rounded-xl border border-slate-200 p-6 text-left space-y-4 shadow-sm">
+    <div class="bg-white rounded-xl border border-slate-200 p-6 text-left space-y-5 shadow-sm">
+      <!-- 個人資訊 -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">姓名 <span class="text-red-400">*</span></label>
@@ -63,16 +64,6 @@
                  class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">年齡</label>
-          <input id="reg_age" type="number" placeholder="例：74" 
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">居住地 <span class="text-red-400">*</span></label>
-          <input id="reg_location" type="text" placeholder="例：苗栗縣大湖鄉" 
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-        </div>
-        <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">性別 <span class="text-red-400">*</span></label>
           <select id="reg_gender" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
             <option value="">請選擇</option>
@@ -81,15 +72,114 @@
           </select>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">慢性疾病</label>
-          <input id="reg_health" type="text" placeholder="例：高血壓、糖尿病" 
+          <label class="block text-xs font-semibold text-slate-600 mb-1">年齡</label>
+          <input id="reg_age" type="number" placeholder="例：74" 
+                 class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">居住地</label>
+          <input id="reg_location" type="text" placeholder="例：苗栗縣大湖鄉" 
+                 class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">身分證字號</label>
+          <input id="reg_id_number" type="password" placeholder="選填" autocomplete="off"
                  class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
         </div>
       </div>
-      <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1">照護備註</label>
-        <textarea id="reg_notes" rows="2" placeholder="例：獨居、容易跌倒..."
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none resize-none"></textarea>
+
+      <!-- 可折疊：更多資訊 -->
+      <div class="border-t border-slate-100 pt-4 space-y-2">
+
+        <details class="group rounded-lg border border-slate-200 overflow-hidden">
+          <summary class="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-700 px-4 py-2.5 bg-slate-50 flex items-center gap-2">
+            <span class="transition-transform group-open:rotate-90 text-[10px]">▶</span> 緊急聯絡人
+          </summary>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">姓名</label>
+              <input id="reg_ec_name" type="text" placeholder="例：王小明" 
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">關係</label>
+              <input id="reg_ec_relation" type="text" placeholder="例：兒子" 
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">電話</label>
+              <input id="reg_ec_phone" type="tel" placeholder="例：0912345678" 
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+            </div>
+          </div>
+        </details>
+
+        <details class="group rounded-lg border border-slate-200 overflow-hidden">
+          <summary class="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-700 px-4 py-2.5 bg-slate-50 flex items-center gap-2">
+            <span class="transition-transform group-open:rotate-90 text-[10px]">▶</span> 醫療與用藥
+          </summary>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">慢性疾病</label>
+              <input id="reg_diseases" type="text" placeholder="例：高血壓、糖尿病" 
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">目前用藥</label>
+              <input id="reg_medications" type="text" placeholder="例：高血壓藥、降血糖藥" 
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">藥物過敏</label>
+              <input id="reg_drug_allergies" type="text" placeholder="例：青黴素" 
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">食物過敏</label>
+              <input id="reg_food_allergies" type="text" placeholder="例：花生、蝦" 
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+            </div>
+          </div>
+        </details>
+
+        <details class="group rounded-lg border border-slate-200 overflow-hidden">
+          <summary class="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-700 px-4 py-2.5 bg-slate-50 flex items-center gap-2">
+            <span class="transition-transform group-open:rotate-90 text-[10px]">▶</span> 生理與照護
+          </summary>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">行動能力</label>
+              <select id="reg_mobility" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+                <option value="">請選擇</option>
+                <option value="正常行走">正常行走</option>
+                <option value="需拐杖輔助">需拐杖輔助</option>
+                <option value="需輪椅">需輪椅</option>
+                <option value="臥床">臥床</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">飲食禁忌</label>
+              <input id="reg_dietary_restrictions" type="text" placeholder="例：低鈉、低糖" 
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+            </div>
+            <div class="flex items-center gap-3">
+              <label class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+                <input id="reg_dementia" type="checkbox" class="w-4 h-4 text-emerald-600 rounded">
+                有失智症
+              </label>
+              <label class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+                <input id="reg_wandering" type="checkbox" class="w-4 h-4 text-emerald-600 rounded">
+                有迷路紀錄
+              </label>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">照護備註</label>
+              <input id="reg_notes" type="text" placeholder="例：獨居、容易跌倒"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+            </div>
+          </div>
+        </details>
+
       </div>
     </div>
 
@@ -180,7 +270,7 @@
 
 <script>
 // ═══════════════════ 角色登入切換邏輯 ═══════════════════
-let currentUserId = "elder_001";
+let currentUserId = null;  // 無預設值，必須透過註冊取得
 
 async function registerAndStart() {
   // 檢查同意書
@@ -190,43 +280,62 @@ async function registerAndStart() {
     return;
   }
 
-  // 檢查必填欄位
+  // 檢查必填欄位（只有姓名、暱稱、性別）
   const name = document.getElementById('reg_name').value.trim();
   const nickname = document.getElementById('reg_nickname').value.trim();
-  const location = document.getElementById('reg_location').value.trim();
   const gender = document.getElementById('reg_gender').value;
   
-  if (!name || !nickname || !location || !gender) {
-    alert('請填寫姓名、暱稱、居住地與性別');
+  if (!name || !nickname || !gender) {
+    alert('請填寫姓名、暱稱與性別');
     return;
   }
 
-  // 送出註冊資料到後端
+  // 收集所有表單資料
+  const formData = {
+    name: name,
+    nickname: nickname,
+    gender: gender,
+    age: parseInt(document.getElementById('reg_age').value) || null,
+    location: document.getElementById('reg_location').value.trim(),
+    id_number: document.getElementById('reg_id_number').value.trim(),
+    // 緊急聯絡人
+    ec_name: document.getElementById('reg_ec_name').value.trim(),
+    ec_relationship: document.getElementById('reg_ec_relation').value.trim(),
+    ec_phone: document.getElementById('reg_ec_phone').value.trim(),
+    // 醫療與用藥
+    chronic_diseases: document.getElementById('reg_diseases').value.split(/[,，]/).map(s => s.trim()).filter(Boolean),
+    current_medications: document.getElementById('reg_medications').value.split(/[,，]/).map(s => s.trim()).filter(Boolean),
+    drug_allergies: document.getElementById('reg_drug_allergies').value.split(/[,，]/).map(s => s.trim()).filter(Boolean),
+    food_allergies: document.getElementById('reg_food_allergies').value.split(/[,，]/).map(s => s.trim()).filter(Boolean),
+    // 生理與照護
+    mobility: document.getElementById('reg_mobility').value,
+    dietary_restrictions: document.getElementById('reg_dietary_restrictions').value.split(/[,，]/).map(s => s.trim()).filter(Boolean),
+    // 精神與認知
+    has_dementia: document.getElementById('reg_dementia').checked,
+    has_wandering_history: document.getElementById('reg_wandering').checked,
+    care_notes: document.getElementById('reg_notes').value.trim(),
+  };
+
+  // 送出到後端
   try {
-    // 產生唯一的 elder_id（用時間戳 + 隨機碼）
-    const elderId = 'elder_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    
     const res = await fetch('/api/elder/profile', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        elder_id: elderId,
-        name: name,
-        nickname: nickname,
-        age: parseInt(document.getElementById('reg_age').value) || null,
-        location: location,
-        primary_language: '中文',
-        gender: gender,
-        health_status: document.getElementById('reg_health').value.split(/[,，]/).map(s => s.trim()).filter(Boolean),
-        care_notes: document.getElementById('reg_notes').value.trim()
-      })
+      body: JSON.stringify(formData)
     });
     if (!res.ok) throw new Error('註冊失敗');
     
-    // 儲存到 localStorage，後續 API 呼叫都用這個 ID
+    const result = await res.json();
+    const elderId = result.elder_id;
+    const isExisting = result.is_existing || false;
+    const sessionToken = result.token || '';
+    
+    // 儲存到 localStorage
     currentUserId = elderId;
     localStorage.setItem('active_elder_id', elderId);
     localStorage.setItem('elder_nickname', nickname);
+    localStorage.setItem('elder_gender', gender);
+    localStorage.setItem('session_token', sessionToken);
   } catch (e) {
     alert('資料儲存失敗：' + e.message);
     return;
@@ -247,12 +356,43 @@ async function registerAndStart() {
     const app = document.getElementById('mainApp');
     app.classList.remove('hidden');
     app.classList.add('fade-up');
-    initWakeWordDetection();
+    
+    // 註冊完成：簡單打招呼 + 介紹自己是小黃
+    isSessionActive = false;
+    const timeHour = new Date().getHours();
+    let timeGreeting = '你好';
+    if (timeHour >= 5 && timeHour < 12) timeGreeting = '早安';
+    else if (timeHour >= 12 && timeHour < 18) timeGreeting = '午安';
+    else if (timeHour >= 18 && timeHour < 22) timeGreeting = '晚安';
+    else timeGreeting = '你好';
+    const greeting = `${nickname}${timeGreeting}，我是小黃。有事叫我「小黃小黃」就好喔，按按鈕也能呼喚小黃哦。`;
+    showReply(greeting);
+    
+    // 用瀏覽器 TTS 播放歡迎語，播完後進入守護模式等待喚醒詞
+    if (window.speechSynthesis) {
+      speechSynthesis.cancel();
+      const utt = new SpeechSynthesisUtterance(greeting);
+      utt.lang = 'zh-TW';
+      utt.rate = 0.95;
+      utt.onend = () => { initWakeWordDetection(); };
+      utt.onerror = () => { initWakeWordDetection(); };
+      speechSynthesis.speak(utt);
+    } else {
+      // 無 TTS 支援，直接進入守護模式
+      initWakeWordDetection();
+    }
   }, 500);
 }
 
 function logout() {
   stopAll();
+  // 清除此使用者的 localStorage 資料
+  localStorage.removeItem('active_elder_id');
+  localStorage.removeItem('elder_nickname');
+  localStorage.removeItem('elder_gender');
+  localStorage.removeItem('session_token');
+  currentUserId = null;
+  
   const replyBox = document.getElementById('replyBox');
   const replyText = document.getElementById('replyText');
   if (replyBox) replyBox.style.display = 'none';
@@ -266,9 +406,9 @@ function logout() {
 
 // ═══════════════════ VAD 參數設定 ═══════════════════
 const THRESHOLD  = 25;    // 音量門檻，防環境雜音
-const SILENCE_MS = 1500;  // 靜音 1.5 秒後送出（確保使用者說完）
+const SILENCE_MS = 5000;  // 靜音 5 秒後送出（考慮長輩口吃或停頓）
 const MIN_MS     = 300;   // 最短有效錄音時間
-const MAX_REC_MS = 15000; // 單次最長錄音 15 秒
+const MAX_REC_MS = 15000; // 最大錄音時間 15 秒（防止嘈雜環境無限錄音）
 
 // ═══════════════════ 系統狀態 ═══════════════════
 let STATE = 'idle';
@@ -295,7 +435,7 @@ function setUI(s) {
     idle:         { bg:'#10b981', anim:'pulse-green 2.5s ease-out infinite', icon:'🎙️', label:'點我開始',  msg:'' },
     waiting_wake: { bg:'#64748b', anim:'pulse-green 2.5s ease-out infinite', icon:'😴', label:'守護中',    msg:'請說「小黃小黃」喚醒' },
     //waiting_wake: { bg:'#64748b', anim:'pulse-green 2.5s ease-out infinite', icon:'😴', label:'守護中',    msg:'請說「小黃小黃」喚醒，或點按鈕開始' },
-    listening:    { bg:'#0ea5e9', anim:'pulse-blue 1.5s ease-out infinite',  icon:'👂', label:'在聆聽…',  msg:'👂 請說話，我在聽…' },
+    listening:    { bg:'#ef4444', anim:'pulse-red .8s ease-out infinite',    icon:'⏺',  label:'說話中…',  msg:'🔴 正在錄音，請說話…' },
     recording:    { bg:'#ef4444', anim:'pulse-red .8s ease-out infinite',    icon:'⏺',  label:'說話中…',  msg:'🔴 正在錄音，請繼續說…' },
     processing:   { bg:'#f59e0b', anim:'none',                               icon:'⏳', label:'思考中…',  msg:'⏳ AI 分析中，請稍候…' },
     speaking:     { bg:'#8b5cf6', anim:'pulse-blue 2s ease-out infinite',    icon:'🔊', label:'回覆中…',  msg:'💬 回覆中，可直接說話打斷' },
@@ -401,9 +541,15 @@ async function startListening() {
     // 🎯 同步啟動瀏覽器端即時語音辨識
     startLiveSpeechRecognition();
 
+    // 啟動閒置計時器（30 秒無聲 → 自動結束）
+    resetIdleTimer();
+    
+    // 最大錄音時間限制（防止嘈雜環境無限錄音）
     clearTimeout(maxRecTimeout);
     maxRecTimeout = setTimeout(() => {
-      if (STATE === 'recording' || STATE === 'listening') sendAudio();
+      if (STATE === 'recording' || STATE === 'listening') {
+        sendAudio();
+      }
     }, MAX_REC_MS);
 
     rafId = requestAnimationFrame(vadLoop);
@@ -426,6 +572,11 @@ function vadLoop() {
     if (STATE === 'listening') setUI('recording');
     clearTimeout(silenceTimer);
     silenceTimer = null;
+    // 使用者開始說話，重置閒置計時器
+    if (_idleTimer || _finalTimer) {
+      clearIdleTimers();
+      _askedStillHere = false;
+    }
   } else {
     if (STATE === 'recording' && !silenceTimer)
       silenceTimer = setTimeout(sendAudio, SILENCE_MS);
@@ -435,7 +586,6 @@ function vadLoop() {
 
 // ═══════════════════ 停止送出 ═══════════════════
 function sendAudio() {
-  clearTimeout(maxRecTimeout);
   clearTimeout(silenceTimer);
   cancelAnimationFrame(rafId);
 
@@ -483,6 +633,8 @@ function encodeWAV(samples) {
 // 音訊播放佇列
 let audioQueue = [];
 let isPlayingQueue = false;
+let _noiseFailCount = 0;  // 連續辨識失敗計數（環境吵雜偵測）
+const MAX_NOISE_FAILS = 3; // 連續 3 次聽不清 → 自動結束
 
 async function onStop() {
   setUI('processing');
@@ -508,15 +660,22 @@ async function onStop() {
   leftchannel = []; recordingLength = 0;
 
   if (!userText) {
-    // 瀏覽器 ASR 沒抓到文字
-    showReply('⚠️ 沒有聽清楚，請再說一次');
-    afterSpeak();
+    // 沒辨識到有效文字（環境噪音）→ 忽略，繼續監聽（不重置閒置計時器）
+    startListening();
+    return;
+  }
+
+  // 過濾無效語音（環境噪音產生的短字、無意義內容）
+  const cleanText = userText.replace(/[。，！？、\s]/g, '');
+  if (cleanText.length <= 1) {
+    // 只有 1 個字或更少 → 可能是噪音，忽略，繼續監聽（不重置閒置計時器）
+    startListening();
     return;
   }
 
   showReply(`🗣️ ${userText}`);
 
-  // 直接送文字給後端（跳過 86 秒的後端 ASR）
+  // 直接送文字給後端
   try {
     await streamChat(userText);
   } catch(err) {
@@ -571,7 +730,14 @@ async function streamChat(userText) {
   _displayedReply = ''; // 重置累積文字
   setUI('speaking');
 
-  const res = await fetch(`/api/chat/stream?elder_id=${currentUserId}&text=${encodeURIComponent(userText)}`, { method: 'POST' });
+  const res = await fetch('/api/chat/stream', {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}`
+    },
+    body: JSON.stringify({ elder_id: currentUserId, text: userText })
+  });
   if (!res.ok) throw new Error('後端異常');
 
   const reader = res.body.getReader();
@@ -753,17 +919,50 @@ function fallbackSpeak(text) {
 }
 
 // ═══════════════════ 對話結束 ═══════════════════
+let _idleTimer = null;       // 1 分鐘無聲計時器
+let _finalTimer = null;      // 10 秒最終計時器
+let _askedStillHere = false; // 是否已問過「還在嗎」
+
 function afterSpeak() {
-  cancelAnimationFrame(rafId);
-  audioCtx?.close(); audioCtx = null;
-  setUI('idle');
-  if (isSessionActive) setTimeout(startListening, 1000);
-  else setTimeout(initWakeWordDetection, 1000);
+  // AI 說完話後的處理
+  if (isSessionActive) {
+    // Session 仍在進行中 → 重新啟動完整的錄音流程（麥克風 + ASR + VAD）
+    resetIdleTimer();
+    startListening();
+  } else {
+    // 結束對話 → 回到語音監聽模式（等待喚醒詞「小黃小黃」）
+    cancelAnimationFrame(rafId);
+    clearIdleTimers();
+    audioCtx?.close(); audioCtx = null;
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    setUI('waiting_wake');
+    showReply('有事再叫我「小黃小黃」就好喔，按按鈕也能呼喚小黃哦。');
+    setTimeout(initWakeWordDetection, 500);
+  }
+}
+
+function resetIdleTimer() {
+  clearIdleTimers();
+  _askedStillHere = false;
+  // 靜音超過 30 秒 → 自動結束對話
+  _idleTimer = setTimeout(() => {
+    if (!isSessionActive || STATE === 'speaking' || STATE === 'processing') return;
+    isSessionActive = false;
+    showReply('好的，有需要再叫我「小黃小黃」就好喔，按按鈕也能呼喚小黃哦。');
+    afterSpeak();
+  }, 30000);
+}
+
+function clearIdleTimers() {
+  clearTimeout(_idleTimer);
+  clearTimeout(_finalTimer);
+  _idleTimer = null;
+  _finalTimer = null;
 }
 
 function stopAll() {
   isSessionActive = false;
-  clearTimeout(maxRecTimeout);
+  clearIdleTimers();
   if (recognition) recognition.stop();
   
   // 清空音訊佇列
@@ -790,11 +989,38 @@ function stopAll() {
   leftchannel = []; recordingLength = 0;
   setUI('idle');
   status.textContent = '已停止';
-  setTimeout(() => { if (STATE === 'idle') status.textContent = ''; }, 2000);
+  // 回到守護模式等待喚醒詞
+  setTimeout(() => { initWakeWordDetection(); }, 2000);
 }
 
-// 💡 預設不執行初始化，等待點選使用者後才啟動！
-setUI('idle');
+// 💡 頁面載入：檢查是否已註冊過（localStorage 中有 active_elder_id）
+(function checkExistingSession() {
+  const savedId = localStorage.getItem('active_elder_id');
+  const savedNickname = localStorage.getItem('elder_nickname');
+  const savedGender = localStorage.getItem('elder_gender');
+  
+  if (savedId && savedNickname) {
+    // 已有註冊資料，直接跳過登入畫面，進入守護模式
+    currentUserId = savedId;
+    const genderEmoji = savedGender === 'male' ? '👴' : '👵';
+    
+    document.getElementById('mainTitle').textContent = `${savedNickname}，今天好嗎？`;
+    document.getElementById('mainAvatar').classList.add('hidden');
+    document.getElementById('mainEmoji').textContent = genderEmoji;
+    document.getElementById('mainEmoji').classList.remove('hidden');
+    
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('loginScreen').style.opacity = '0';
+    document.getElementById('mainApp').classList.remove('hidden');
+    
+    // 進入守護模式，等待喚醒詞
+    isSessionActive = false;
+    initWakeWordDetection();
+  } else {
+    // 未註冊，顯示登入畫面
+    setUI('idle');
+  }
+})();
 </script>
 </body>
 </html>

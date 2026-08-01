@@ -86,44 +86,11 @@ def _get_emotion_prompt_section() -> str:
 
 def update_emotion_in_prompt():
     """
-    即時更新 Environmental_Prompts.txt 中的情緒區塊。
-    此函數在每次情緒辨識完成後呼叫，不需等待 6 小時天氣更新。
-    
-    策略：讀取現有檔案 → 定位情緒區塊 → 替換為最新情緒資料 → 寫回。
-    若檔案中尚無情緒區塊，則附加在末尾。
+    已停用：情緒資料改為從用戶個人數據中讀取（dashboard metrics），
+    不再寫入全局的 Environmental_Prompts.txt。
+    保留此函數避免其他地方調用時報錯。
     """
-    prompt_path = config.ENVIRONMENTAL_PROMPTS_PATH
-    
-    if not os.path.exists(prompt_path):
-        print("⚠️ [情緒更新] Environmental_Prompts.txt 不存在，跳過情緒注入")
-        return
-    
-    try:
-        with open(prompt_path, "r", encoding="utf-8") as f:
-            content = f.read()
-        
-        # 生成最新的情緒區塊
-        new_emotion_section = _get_emotion_prompt_section()
-        
-        # 檢查是否已有情緒區塊
-        if _EMOTION_SECTION_START in content:
-            # 找到舊區塊的範圍並替換
-            start_idx = content.index(_EMOTION_SECTION_START)
-            
-            # 找到情緒行為指引的結尾（第 8 條或區塊結束標記之後的內容）
-            # 我們替換從 _EMOTION_SECTION_START 到文件末尾（因為情緒區塊在最後面）
-            content = content[:start_idx].rstrip() + "\n\n" + new_emotion_section + "\n"
-        else:
-            # 尚無情緒區塊，附加在末尾
-            content = content.rstrip() + "\n\n" + new_emotion_section + "\n"
-        
-        with open(prompt_path, "w", encoding="utf-8") as f:
-            f.write(content)
-        
-        print(f"✅ [情緒更新] Environmental_Prompts.txt 情緒區塊已更新")
-    
-    except Exception as e:
-        print(f"⚠️ [情緒更新] 寫入失敗: {e}")
+    pass
 
 def fetch_and_generate_prompt():
     print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] 正在更新氣象與日落資料並重新生成 Prompt...")
@@ -238,9 +205,6 @@ def fetch_and_generate_prompt():
     # 3. 封裝生成最終的 System Prompt
     # ==========================================
     
-    # 讀取當前情緒摘要（如有）
-    emotion_section = _get_emotion_prompt_section()
-    
     prompt_template = f"""# SYSTEM ENVIRONMENT CONTEXT (系統即時環境背景)
 # 檔案更新時間: {now.strftime('%Y-%m-%d %H:%M:%S')}
 # 這是系統每 6 小時自動更新的全台即時氣象與日落安全數據。請 AI 在回覆時，將這些環境脈絡納入考量：
@@ -252,8 +216,6 @@ def fetch_and_generate_prompt():
 1. 當使用者聊到出門、散步、回家、天氣、問候時，請務必比對使用者所在縣市的「日落安全」狀態。
 2. 如果使用者的縣市狀態顯示為「⚠️ 警告」或「🔴 已日落」，請用極度溫柔、溫暖的語氣，貼心地提醒長輩「天色不早了/外面天黑了，散步要注意安全、早點回家休息、看清步伐」。
 3. 同時結合天氣資訊（如降雨機率、保暖穿搭建議）給予最完善的長照關懷。
-
-{emotion_section}
 """
 
     # 寫入 (覆寫) Environmental_Prompts.txt
@@ -262,9 +224,210 @@ def fetch_and_generate_prompt():
         
     print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] ✅ 成功將最新【天氣 + 日落】提示詞寫入 Environmental_Prompts.txt")
 
+
+# ═══════════════════════════════════════════════════════
+# LINE Bot 定時推播（每天 19:00 + 5 分鐘緩衝）
+# ═══════════════════════════════════════════════════════
+
+def scheduled_line_push(max_wait_seconds: int = 300) -> bool:
+    """
+    每天 19:00 定時觸發 LINE 推播今日照護摘要。
+    
+    緩衝機制（demo.md 規格）：
+    - 觸發時先檢查背景分析是否仍在執行
+    - 若仍在執行，最多等待 5 分鐘（每 30 秒檢查一次）
+    - 確保 LINE 通知包含最即時、完整的照護摘要
+    
+    :return: True 推播成功 / False 推播失敗或已推播過
+    """
+    from core.data_manager import DataManager
+    
+    print(f"[LINE 推播] 開始執行每日推播流程...")
+    
+    # 遍歷 data/ 目錄下的所有長者
+    data_dir = os.path.join(config.BASE_DIR, "data")
+    if not os.path.exists(data_dir):
+        print(f"[LINE 推播] 資料目錄不存在：{data_dir}")
+        return False
+    
+    elder_dirs = [d for d in os.listdir(data_dir) if d.startswith("elder_") and os.path.isdir(os.path.join(data_dir, d))]
+    
+    if not elder_dirs:
+        print("[LINE 推播] 沒有任何長者資料，跳過推播")
+        return False
+    
+    for elder_id in elder_dirs:
+        try:
+            dm = DataManager(elder_id=elder_id)
+            dashboard = dm.get_dashboard_logs()
+            
+            # 檢查是否已推播過
+            if dashboard.get("line_notification_status", {}).get("is_sent", False):
+                print(f"[LINE 推播] {elder_id} 今日已推播過，跳過")
+                continue
+            
+            # ── 緩衝機制：檢查背景分析是否仍在執行 ──
+            waited = 0
+            try:
+                # 嘗試 import app 模組的 is_session_analysis_running
+                # 注意：weather_cron 作為獨立程序時可能無法 import app
+                # 此時改用檔案時間戳判斷
+                import importlib
+                app_module = importlib.import_module("app")
+                is_running_fn = getattr(app_module, "is_session_analysis_running", None)
+                
+                if is_running_fn and is_running_fn(elder_id):
+                    print(f"[LINE 推播] {elder_id} 背景分析仍在執行，啟動緩衝等待（最多 {max_wait_seconds}s）...")
+                    while waited < max_wait_seconds:
+                        time.sleep(30)
+                        waited += 30
+                        if not is_running_fn(elder_id):
+                            print(f"[LINE 推播] {elder_id} 背景分析已完成（等待了 {waited}s），繼續推播")
+                            break
+                    else:
+                        print(f"[LINE 推播] {elder_id} 等待超時 {max_wait_seconds}s，仍使用目前摘要推播")
+            except (ImportError, Exception) as e:
+                # 獨立執行時無法 import app，用時間戳判斷
+                # 如果最後互動時間在 18:55 之後，等 5 分鐘
+                short_term = dm.get_short_term_memory()
+                last_time_str = short_term.get("active_context", {}).get("current_time", "")
+                if last_time_str:
+                    try:
+                        last_time = datetime.fromisoformat(last_time_str)
+                        now = datetime.now()
+                        # 如果最後互動在 5 分鐘內，等待
+                        minutes_since_last = (now - last_time).total_seconds() / 60
+                        if minutes_since_last < 5:
+                            wait_secs = int((5 - minutes_since_last) * 60)
+                            print(f"[LINE 推播] {elder_id} 最近 {minutes_since_last:.1f} 分鐘有互動，"
+                                  f"延遲 {wait_secs}s 確保摘要完整...")
+                            time.sleep(min(wait_secs, max_wait_seconds))
+                    except Exception:
+                        pass
+            
+            # ── 重新讀取最新摘要（等待後可能已更新）──
+            dashboard = dm.get_dashboard_logs()
+            summary = dashboard.get("today_summary", {})
+            summary_text = summary.get("text", "")
+            metrics = summary.get("metrics", {})
+            
+            # 如果完全沒有摘要內容，跳過推播
+            if not summary_text and not any(v and v != "尚未記錄" for v in metrics.values() if isinstance(v, str)):
+                print(f"[LINE 推播] {elder_id} 今日無有效摘要，跳過推播")
+                continue
+            
+            # 讀取長者名稱
+            profile = dm.get_profile()
+            elder_name = profile.get("personal_info", {}).get("name", elder_id)
+            
+            # 讀取情緒摘要
+            emotion_text = metrics.get("emotion", "")
+            emotion_line = f"\n\n🎭 今日情緒：{emotion_text}" if emotion_text and emotion_text != "尚未偵測" else ""
+            
+            # 組裝 LINE 訊息
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            diet = metrics.get("diet", "對話中未提及相關資訊")
+            sleep = metrics.get("sleep", "對話中未提及相關資訊")
+            med_taken = metrics.get("medication_taken", False)
+            med_time = metrics.get("medication_time", "")
+            med_status = f"已服藥（{med_time}）" if med_taken else "今日尚未記錄服藥"
+            
+            formatted_text = (
+                f"📅 【{elder_name} 今日生活摘要】\n"
+                f"日期：{today_str}\n"
+                f"━━━━━━━━━━━━━━━\n"
+                f"📝 綜合摘要：\n{summary_text}\n\n"
+                f"🍎 飲食狀況：\n{diet}\n\n"
+                f"😴 睡眠品質：\n{sleep}\n\n"
+                f"💊 用藥紀錄：\n{med_status}"
+                f"{emotion_line}"
+            )
+            
+            # 推播到 LINE
+            push_success = _send_line_push(formatted_text)
+            
+            if push_success:
+                dm.mark_line_notification_sent()
+                print(f"[LINE 推播] ✅ {elder_name}（{elder_id}）今日摘要已成功推播到 LINE！")
+            else:
+                print(f"[LINE 推播] ❌ {elder_id} 推播失敗")
+                
+        except Exception as e:
+            print(f"[LINE 推播] {elder_id} 處理失敗: {e}")
+    
+    return True
+
+
+def _send_line_push(text: str) -> bool:
+    """
+    透過 LINE Bot API 推播訊息給目標使用者。
+    直接使用 LINE Messaging API HTTP 呼叫，不依賴 Flask 的 line_bot.py。
+    """
+    # 從 config 或硬編碼取得 LINE 設定
+    access_token = config.LINE_CHANNEL_ACCESS_TOKEN
+    target_user = config.LINE_TARGET_USER_ID
+    
+    # 若 config 未設定，嘗試從 line_bot.py 的硬編碼讀取
+    if not access_token:
+        access_token = "l+QP6SuTqqETfAdeY3bJZSSU1ZmF6eBoxeOnWd/mlQpx7E7ihH7mIMR/hYmdSDimr3OWejX0c8kE0MY5LitY4WAHwIyn8fEtFfCT+57kFUayX6ovFZe34BAeMAN6ZcT+53FyVfF1aeb/GhGqihypoQdB04t89/1O/w1cDnyilFU="
+    if not target_user:
+        target_user = "U8ea3d1facf0625457e60e3e831b2a13c"
+    
+    if not access_token or not target_user:
+        print("[LINE 推播] ⚠️ LINE 設定不完整（無 access_token 或 target_user）")
+        return False
+    
+    try:
+        url = "https://api.line.me/v2/bot/message/push"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {access_token}"
+        }
+        payload = {
+            "to": target_user,
+            "messages": [{"type": "text", "text": text}]
+        }
+        
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        
+        if response.status_code == 200:
+            return True
+        else:
+            print(f"[LINE 推播] API 回應異常：{response.status_code} {response.text[:200]}")
+            return False
+    except Exception as e:
+        print(f"[LINE 推播] 發送失敗: {e}")
+        return False
+
 if __name__ == "__main__":
-    print("=== 天氣與日落環境監控服務已開啟 ===")
+    print("=== 天氣與日落環境監控服務 + LINE 定時推播已開啟 ===")
+    print(f"    天氣更新：每 6 小時")
+    print(f"    LINE 推播：每天 19:00（含 5 分鐘緩衝機制）")
+    
+    _last_line_push_date = None  # 記錄今天是否已推播過
+    
     while True:
         fetch_and_generate_prompt()
+        
+        # ── LINE 定時推播檢查（每分鐘輪詢）──
+        now = datetime.now()
+        today_str = now.strftime("%Y-%m-%d")
+        
+        # 每天 19:00 ~ 19:10 區間內觸發推播（一天只推一次）
+        if now.hour == 19 and now.minute <= 10 and _last_line_push_date != today_str:
+            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] 📢 LINE 推播觸發時間到！")
+            push_success = scheduled_line_push()
+            if push_success:
+                _last_line_push_date = today_str
+        
         print("進入等待狀態，6 小時後將自動重新讀取... (欲關閉請直接關閉視窗，或按 Ctrl+C)")
-        time.sleep(21600)
+        
+        # 如果在 18:50~19:10 區間，改為每 60 秒檢查一次（確保不會錯過推播時間）
+        if now.hour == 18 and now.minute >= 50:
+            print("  [即將進入推播時段，60 秒後再檢查]")
+            time.sleep(60)
+        elif now.hour == 19 and now.minute <= 10:
+            print("  [推播時段內，60 秒後再檢查]")
+            time.sleep(60)
+        else:
+            time.sleep(21600)
