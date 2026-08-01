@@ -146,3 +146,15 @@ STATIC_HTML_FILES = {
     "dashboard": os.path.join(WEB_DIR, "dashboard.html"),
     "admin": os.path.join(WEB_DIR, "admin.html"),
 }
+
+# ═══════════════════════════════════════════════════════
+# 時區設定（強制台灣時區 UTC+8）
+# ═══════════════════════════════════════════════════════
+from datetime import timezone, timedelta
+
+TW_TIMEZONE = timezone(timedelta(hours=8))
+
+def now_tw():
+    """取得台灣當前時間"""
+    from datetime import datetime
+    return datetime.now(TW_TIMEZONE)

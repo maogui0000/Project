@@ -76,7 +76,7 @@ class MemoryController:
             print("⚠️ [記憶控制] 尚未設定 elder_id，跳過記憶更新")
             return False
         
-        now = datetime.now()
+        now = config.now_tw()
         current_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
 
         # 1. 寫入短期記憶

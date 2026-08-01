@@ -146,8 +146,8 @@ def get_combined_system_prompt(elder_id: str = "elder_001"):
         with open(config.ENVIRONMENTAL_PROMPTS_PATH, 'r', encoding='utf-8') as f:
             weather_prompt = f.read()
     
-    # 當前時間情境
-    now = datetime.now()
+    # 當前時間情境（強制使用台灣時區）
+    now = config.now_tw()
     hour = now.hour
     if hour < 6:
         time_context = "現在是凌晨，長輩可能睡不著或剛醒來"
