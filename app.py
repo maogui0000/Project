@@ -1347,6 +1347,90 @@ def voice_stop():
 
 
 # ═══════════════════════════════════════════════════════
+# API 9: 留言板（Messages）
+# ═══════════════════════════════════════════════════════
+
+class MessageReplyRequest(BaseModel):
+    message_id: str
+    reply_text: str
+
+class MessageMarkReadRequest(BaseModel):
+    message_id: str
+
+
+@app.get("/api/messages/{elder_id}/unread")
+def get_unread_messages(elder_id: str):
+    """取得未讀留言列表"""
+    elder_id = _validate_elder_id(elder_id)
+    try:
+        elder_dm = DataManager(elder_id=elder_id)
+        unread = elder_dm.get_unread_messages()
+        return {
+            "unread_count": len(unread),
+            "messages": [
+                {
+                    "message_id": m["message_id"],
+                    "sender_name": m["sender_name"],
+                    "content_type": m["content_type"],
+                    "content_text": m["content_text"],
+                    "created_at": m["created_at"],
+                }
+                for m in unread
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/messages/{elder_id}/mark_read")
+def mark_message_read(elder_id: str, req: MessageMarkReadRequest):
+    """標記留言為已讀，並推播已讀回報給照護者"""
+    elder_id = _validate_elder_id(elder_id)
+    try:
+        elder_dm = DataManager(elder_id=elder_id)
+        success = elder_dm.mark_message_read(req.message_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="找不到該留言")
+
+        # 推播已讀回報給照護者
+        try:
+            from services.line_bot import notify_caregiver_read
+            notify_caregiver_read()
+        except Exception as e:
+            print(f"⚠️ [留言板] 已讀回報推播失敗: {e}")
+
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/messages/{elder_id}/reply")
+def reply_to_message(elder_id: str, req: MessageReplyRequest):
+    """長者回覆留言，並推播回覆內容給照護者"""
+    elder_id = _validate_elder_id(elder_id)
+    try:
+        elder_dm = DataManager(elder_id=elder_id)
+        success = elder_dm.reply_to_message(req.message_id, req.reply_text)
+        if not success:
+            raise HTTPException(status_code=404, detail="找不到該留言")
+
+        # 推播長者回覆給照護者
+        try:
+            from services.line_bot import notify_caregiver_reply
+            notify_caregiver_reply(req.reply_text)
+        except Exception as e:
+            print(f"⚠️ [留言板] 回覆推播失敗: {e}")
+
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ═══════════════════════════════════════════════════════
 # 靜態檔案與頁面路由
 # ═══════════════════════════════════════════════════════
 

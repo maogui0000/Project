@@ -78,6 +78,7 @@ class DataManager:
         self.short_term_path = paths["short_term"]
         self.dashboard_path = paths["dashboard"]
         self.reminders_path = os.path.join(self.elder_dir, "reminders.json")
+        self.messages_path = os.path.join(self.elder_dir, "messages.json")
         os.makedirs(self.elder_dir, exist_ok=True)
         self._ensure_files_exist()
 
@@ -166,6 +167,9 @@ class DataManager:
         # reminders.json 單獨處理
         if not os.path.exists(self.reminders_path) or os.stat(self.reminders_path).st_size == 0:
             self._save(self.reminders_path, {"elder_id": self.elder_id, "reminders": []})
+        # messages.json 單獨處理
+        if not os.path.exists(self.messages_path) or os.stat(self.messages_path).st_size == 0:
+            self._save(self.messages_path, {"elder_id": self.elder_id, "messages": []})
 
     # ═══════════════════════════════════════════════════
     # 1. Elder Profile（長輩基本資料）
@@ -737,3 +741,71 @@ class DataManager:
             "emotion_summary": emotion_summary,
             "emotion_history": self.get_emotion_history(),
         }
+
+    # ═══════════════════════════════════════════════════
+    # 7. 留言板（Messages）
+    # ═══════════════════════════════════════════════════
+
+    def get_messages(self) -> dict:
+        """讀取 messages.json"""
+        return self._load(self.messages_path)
+
+    def get_unread_messages(self) -> list:
+        """取得所有 status == 'unread' 的留言"""
+        data = self.get_messages()
+        return [m for m in data.get("messages", []) if m.get("status") == "unread"]
+
+    def add_message(self, sender_name: str, content_type: str,
+                    content_text: str, content_audio_path: str = None) -> dict:
+        """
+        新增一筆留言（照護者傳送時呼叫）。
+        回傳新建立的留言物件。
+        """
+        import secrets
+        now = datetime.now()
+        message_id = f"msg_{int(now.timestamp())}_{secrets.token_hex(4)}"
+
+        new_msg = {
+            "message_id": message_id,
+            "sender_type": "caregiver",
+            "sender_name": sender_name,
+            "content_type": content_type,
+            "content_text": content_text,
+            "content_audio_path": content_audio_path,
+            "status": "unread",
+            "created_at": now.isoformat(),
+            "read_at": None,
+            "reply_text": None,
+            "replied_at": None,
+        }
+
+        data = self.get_messages()
+        data["messages"].append(new_msg)
+        self._save(self.messages_path, data)
+        print(f"📩 [留言板] 新留言：{sender_name}「{content_text[:30]}...」")
+        return new_msg
+
+    def mark_message_read(self, message_id: str) -> bool:
+        """將留言標記為已讀"""
+        data = self.get_messages()
+        for msg in data.get("messages", []):
+            if msg["message_id"] == message_id:
+                msg["status"] = "read"
+                msg["read_at"] = datetime.now().isoformat()
+                self._save(self.messages_path, data)
+                print(f"👁️ [留言板] 已讀：{message_id}")
+                return True
+        return False
+
+    def reply_to_message(self, message_id: str, reply_text: str) -> bool:
+        """為留言新增長者回覆"""
+        data = self.get_messages()
+        for msg in data.get("messages", []):
+            if msg["message_id"] == message_id:
+                msg["status"] = "replied"
+                msg["reply_text"] = reply_text
+                msg["replied_at"] = datetime.now().isoformat()
+                self._save(self.messages_path, data)
+                print(f"💬 [留言板] 長者回覆：「{reply_text[:30]}」")
+                return True
+        return False

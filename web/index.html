@@ -452,7 +452,7 @@ function setUI(s) {
 function onBtnClick() {
   if (STATE === 'waiting_wake' || STATE === 'idle') {
     isSessionActive = true;
-    startListening();
+    checkUnreadMessages();
   } else {
     stopAll();
   }
@@ -489,7 +489,7 @@ function initWakeWordDetection() {
 
   recognition.onend = () => {
     if (!isSessionActive && STATE === 'waiting_wake') recognition.start();
-    else if (isSessionActive) startListening();
+    else if (isSessionActive) checkUnreadMessages();
   };
 
   recognition.onerror = (e) => {
@@ -505,6 +505,175 @@ function initWakeWordDetection() {
     console.warn('SpeechRecognition start failed:', e);
     setUI('waiting_wake');
   }
+}
+
+// ═══════════════════ 留言板：未讀留言播報 ═══════════════════
+
+let _messageFlowActive = false;  // 留言播報流程是否進行中
+
+async function checkUnreadMessages() {
+  if (!currentUserId) { startListening(); return; }
+  
+  try {
+    const resp = await fetch(`/api/messages/${currentUserId}/unread`);
+    const data = await resp.json();
+    
+    if (data.unread_count > 0) {
+      await playMessageFlow(data.messages);
+    } else {
+      startListening();
+    }
+  } catch (e) {
+    console.warn('[留言板] 檢查未讀留言失敗:', e);
+    startListening();
+  }
+}
+
+async function playMessageFlow(messages) {
+  _messageFlowActive = true;
+  
+  // 1. TTS 提醒有留言
+  const senderName = messages[0].sender_name || '家人';
+  await ttsPrompt(`${senderName}剛才在LINE上留了訊息給你喔，要聽聽看嗎？`);
+  
+  // 2. 等待長者回應
+  const response = await listenForShortResponse();
+  
+  if (isNegativeResponse(response)) {
+    await ttsPrompt('好的，有需要再告訴我喔。');
+    _messageFlowActive = false;
+    startListening();
+    return;
+  }
+  
+  // 3. 逐筆播報留言
+  for (const msg of messages) {
+    if (msg.content_type === 'text') {
+      await ttsPrompt(`${msg.sender_name}說：${msg.content_text}`);
+    } else {
+      await ttsPrompt(`${msg.sender_name}留了一段語音訊息給你。`);
+      // 語音留言：嘗試播放音檔（如果有路徑的話）
+    }
+    // 標記已讀
+    try {
+      await fetch(`/api/messages/${currentUserId}/mark_read`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ message_id: msg.message_id })
+      });
+    } catch (e) { console.warn('[留言板] 標記已讀失敗:', e); }
+  }
+  
+  // 4. 問是否回覆
+  await ttsPrompt('聽完了，要不要回覆家人呢？');
+  const replyResponse = await listenForShortResponse();
+  
+  if (!isNegativeResponse(replyResponse)) {
+    // 5. 錄製回覆
+    await ttsPrompt('好的，請說你想回覆的內容。');
+    const replyText = await listenForReplyContent();
+    
+    if (replyText && replyText.trim()) {
+      // 送出回覆
+      const lastMsg = messages[messages.length - 1];
+      try {
+        await fetch(`/api/messages/${currentUserId}/reply`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ message_id: lastMsg.message_id, reply_text: replyText })
+        });
+        await ttsPrompt('好的，我幫你傳給家人囉！');
+      } catch (e) {
+        console.warn('[留言板] 回覆送出失敗:', e);
+        await ttsPrompt('抱歉，傳送失敗了，下次再試試看。');
+      }
+    }
+  } else {
+    await ttsPrompt('好的，沒問題。');
+  }
+  
+  _messageFlowActive = false;
+  startListening();
+}
+
+function ttsPrompt(text) {
+  return new Promise((resolve) => {
+    const url = `/api/tts?text=${encodeURIComponent(text)}`;
+    const audio = new Audio(url);
+    audio.onended = resolve;
+    audio.onerror = resolve;
+    audio.play().catch(() => {
+      // fallback: 用瀏覽器 TTS
+      if (window.speechSynthesis) {
+        const utt = new SpeechSynthesisUtterance(text);
+        utt.lang = 'zh-TW';
+        utt.rate = 0.95;
+        utt.onend = resolve;
+        utt.onerror = resolve;
+        speechSynthesis.speak(utt);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+function listenForShortResponse() {
+  return new Promise((resolve) => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      resolve('好');  // 不支援 Speech API 時預設同意
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const rec = new SpeechRecognition();
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.lang = 'zh-TW';
+    
+    let timeout = setTimeout(() => { rec.stop(); resolve(''); }, 8000);
+    
+    rec.onresult = (event) => {
+      clearTimeout(timeout);
+      const text = event.results[0][0].transcript;
+      resolve(text);
+    };
+    rec.onerror = () => { clearTimeout(timeout); resolve(''); };
+    rec.onend = () => { clearTimeout(timeout); };
+    
+    try { rec.start(); } catch(e) { resolve('好'); }
+  });
+}
+
+function listenForReplyContent() {
+  return new Promise((resolve) => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      resolve('');
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const rec = new SpeechRecognition();
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.lang = 'zh-TW';
+    
+    let timeout = setTimeout(() => { rec.stop(); resolve(''); }, 15000);
+    
+    rec.onresult = (event) => {
+      clearTimeout(timeout);
+      const text = event.results[0][0].transcript;
+      resolve(text);
+    };
+    rec.onerror = () => { clearTimeout(timeout); resolve(''); };
+    rec.onend = () => { clearTimeout(timeout); };
+    
+    try { rec.start(); } catch(e) { resolve(''); }
+  });
+}
+
+function isNegativeResponse(text) {
+  if (!text) return false;
+  const noWords = ['不', '等', '晚點', '不用', '沒', '不要', '算了', '下次'];
+  return noWords.some(w => text.includes(w));
 }
 
 // ═══════════════════ 開始錄音 ═══════════════════
