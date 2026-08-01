@@ -1,19 +1,37 @@
 import asyncio
 import os
 import sys
-import torch
-import miniaudio
 import numpy as np
 import edge_tts
 import warnings
-from transformers import WhisperProcessor, WhisperForConditionalGeneration
-import transformers
 
-# 抑制 transformers 的無害警告（max_new_tokens、SuppressTokens、tokenizer spaces）
-warnings.filterwarnings("ignore", message=".*max_new_tokens.*max_length.*")
-warnings.filterwarnings("ignore", message=".*custom logits processor.*")
-warnings.filterwarnings("ignore", message=".*clean_up_tokenization_spaces.*")
-transformers.logging.set_verbosity_error()  # 只顯示 ERROR 層級
+# ── torch / transformers 延遲載入（EC2 輕量部署可不裝）────
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+    print("[ASR] ⚠️ torch 未安裝，後端 ASR 不可用（前端瀏覽器 ASR 仍可使用）")
+
+try:
+    from transformers import WhisperProcessor, WhisperForConditionalGeneration
+    import transformers
+    TRANSFORMERS_AVAILABLE = True
+    # 抑制 transformers 的無害警告
+    warnings.filterwarnings("ignore", message=".*max_new_tokens.*max_length.*")
+    warnings.filterwarnings("ignore", message=".*custom logits processor.*")
+    warnings.filterwarnings("ignore", message=".*clean_up_tokenization_spaces.*")
+    transformers.logging.set_verbosity_error()
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
+    print("[ASR] ⚠️ transformers 未安裝，後端 ASR 不可用")
+
+try:
+    import miniaudio
+    MINIAUDIO_AVAILABLE = True
+except ImportError:
+    MINIAUDIO_AVAILABLE = False
+    print("[ASR] ⚠️ miniaudio 未安裝，本地音檔播放不可用")
 
 # ── faster-whisper (CTranslate2) 加速引擎 ─────────────
 try:
@@ -68,7 +86,7 @@ _CT2_MODEL_PATH = os.path.join(_project_dir, "models", "taiwan-tongues-asr-ct2")
 _fw_model = None
 
 # HuggingFace Transformers fallback
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cuda" if (TORCH_AVAILABLE and torch.cuda.is_available()) else "cpu"
 processor = None
 model = None
 
@@ -135,6 +153,10 @@ def _lazy_init_asr():
     """內部輔助函式：載入 HuggingFace Transformers ASR 模型（fallback）"""
     global processor, model
     if processor is not None and model is not None:
+        return
+
+    if not TORCH_AVAILABLE or not TRANSFORMERS_AVAILABLE:
+        print("[ASR] ⚠️ torch/transformers 未安裝，無法載入 ASR 模型")
         return
 
     if not os.path.exists(LOCAL_MODEL_PATH):
@@ -342,7 +364,12 @@ def audio_to_text(audio_path: str) -> str:
     """
     將音訊檔案轉換為文字。
     優先使用 faster-whisper (CTranslate2 int8)，僅在例外時 fallback 到 HuggingFace Transformers。
+    如果 torch/transformers 未安裝，回傳空字串（前端用瀏覽器 Web Speech API 做 ASR）。
     """
+    if not TORCH_AVAILABLE:
+        print("[ASR] torch 未安裝，跳過後端 ASR")
+        return ""
+
     import time as _t
     _total_start = _t.time()
 

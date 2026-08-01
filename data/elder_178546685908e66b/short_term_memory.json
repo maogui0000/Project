@@ -1,0 +1,38 @@
+{
+  "elder_id": "elder_178546685908e66b",
+  "current_session_id": "sess_20260802_001",
+  "active_context": {
+    "weather": "",
+    "current_time": "2026-08-02T02:42:56.162882",
+    "topic_focus": ""
+  },
+  "dialogue_history": [
+    {
+      "turn": 6,
+      "timestamp": "2026-08-02T02:40:53.109150",
+      "expires_at": "2026-08-02T03:40:53.109150",
+      "ttl_minutes": 60,
+      "user": "你好，我今天吃了早餐",
+      "ai": "長輩您好，我是小黃！現在是凌晨兩點多，您這麼晚還沒睡呀？吃早餐是昨天的事情嗎？",
+      "is_flagged_for_long_term": false
+    },
+    {
+      "turn": 6,
+      "timestamp": "2026-08-02T02:40:54.021818",
+      "expires_at": "2026-08-02T03:40:54.021818",
+      "ttl_minutes": 60,
+      "user": "你好，我今天吃了早餐",
+      "ai": "長輩您好，我是小黃！現在是凌晨兩點多，您這麼晚還沒睡呀？吃早餐是昨天的事情嗎？",
+      "is_flagged_for_long_term": false
+    },
+    {
+      "turn": 6,
+      "timestamp": "2026-08-02T02:42:56.162882",
+      "expires_at": "2026-08-02T03:42:56.162882",
+      "ttl_minutes": 60,
+      "user": "你好，我今天吃了早餐",
+      "ai": "長輩您好，我是小黃！現在是凌晨兩點多，您這麼晚還沒睡呀？吃早餐是昨天的事情嗎？",
+      "is_flagged_for_long_term": false
+    }
+  ]
+}

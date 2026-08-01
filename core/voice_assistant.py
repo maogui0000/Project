@@ -20,8 +20,14 @@ import threading
 import time
 
 import numpy as np
-import sounddevice as sd
-import soundfile as sf
+
+try:
+    import sounddevice as sd
+    import soundfile as sf
+    AUDIO_AVAILABLE = True
+except ImportError:
+    AUDIO_AVAILABLE = False
+    print("[語音助理] ⚠️ sounddevice/soundfile 未安裝，本地語音功能不可用")
 
 # ── 路徑設定，確保可以 import Demo 內的模組 ──────────
 _demo_dir = os.path.dirname(os.path.abspath(__file__))

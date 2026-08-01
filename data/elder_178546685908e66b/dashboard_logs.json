@@ -1,0 +1,64 @@
+{
+  "elder_id": "elder_178546685908e66b",
+  "report_date": "2026-08-02",
+  "line_notification_status": {
+    "trigger_time": "19:00:00",
+    "is_sent": false
+  },
+  "today_summary": {
+    "text": "長者在凌晨時段提到今天吃了早餐。",
+    "metrics": {
+      "diet": "早餐",
+      "sleep": "對話中未提及相關資訊",
+      "medication_taken": false,
+      "medication_time": null,
+      "latest_emotion": "未檢測",
+      "emotion": "未檢測",
+      "diet_by_period": {
+        "其他": "早餐"
+      },
+      "activity": "對話中未提及相關資訊"
+    }
+  },
+  "interaction_stats": {
+    "total_turns": 1,
+    "weekly_trend": [
+      {
+        "day": "週一",
+        "count": 0
+      },
+      {
+        "day": "週二",
+        "count": 0
+      },
+      {
+        "day": "週三",
+        "count": 0
+      },
+      {
+        "day": "週四",
+        "count": 0
+      },
+      {
+        "day": "週五",
+        "count": 0
+      },
+      {
+        "day": "週六",
+        "count": 0
+      },
+      {
+        "day": "週日",
+        "count": 1
+      }
+    ]
+  },
+  "timeline_events": [
+    {
+      "time": "2026-08-02T02:40:54.017992",
+      "type": "interaction",
+      "title": "智慧語音關懷",
+      "description": "長者說：你好，我今天吃了早餐\n小黃：長輩您好，我是小黃！現在是凌晨兩點多，您這麼晚還沒睡呀？吃早餐是昨天的事情嗎？"
+    }
+  ]
+}

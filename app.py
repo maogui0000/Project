@@ -26,14 +26,30 @@ from core.data_manager import DataManager
 
 # ── 引入各功能模組 ───────────────────────────────────
 import services.ai_summary
-from core.voice_assistant import get_assistant
+try:
+    from core.voice_assistant import get_assistant
+except ImportError as e:
+    print(f"⚠️ [啟動] voice_assistant 載入失敗（Web API 模式不影響）: {e}")
+    get_assistant = None
 
 # ── 語音辨識與合成 ───────────────────────────────────
 import edge_tts
-from speech.asr_tts import audio_to_text, VOICES, synthesize_sentence_to_bytes
+try:
+    from speech.asr_tts import audio_to_text, VOICES, synthesize_sentence_to_bytes
+except ImportError as e:
+    print(f"⚠️ [啟動] ASR/TTS 部分模組載入失敗: {e}")
+    def audio_to_text(path): return ""
+    VOICES = {}
+    async def synthesize_sentence_to_bytes(text, *args, **kwargs): return None
 
 # ── 語音情緒辨識 ─────────────────────────────────────
-from speech.emotion_recognition import recognize_emotion, log_emotion, get_emotion_summary
+try:
+    from speech.emotion_recognition import recognize_emotion, log_emotion, get_emotion_summary
+except ImportError as e:
+    print(f"⚠️ [啟動] 情緒辨識模組載入失敗: {e}")
+    def recognize_emotion(path): return {"emotion_zh": "中立", "emotion_en": "neutral", "emotion_index": 4, "confidence": 0.0, "all_scores": {}}
+    def log_emotion(result): pass
+    def get_emotion_summary(): return {}
 from services.weather_cron import update_emotion_in_prompt
 
 # ── 串流 LLM 逐句生成 ───────────────────────────────
