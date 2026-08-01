@@ -34,247 +34,122 @@
 <body class="bg-slate-50 select-none m-0 p-0">
 
 <!-- ══════════════════════════════════════════
-     1. 角色登入畫面 (預設顯示)
+     1. 角色登入畫面 (分頁式註冊)
 ══════════════════════════════════════════ -->
-<div id="loginScreen" class="fixed inset-0 netflix-bg z-50 overflow-y-auto py-10 flex flex-col items-center transition-opacity duration-500">
-  <div class="text-center max-w-lg px-4">
-    <!-- 頂部系統 LOGO -->
-    <div class="flex justify-center mb-6">
-      <img src="images/school_logo.png" 
-           alt="學校 Logo" 
-           class="h-16 sm:h-20 object-contain drop-shadow-sm"
-           onerror="this.style.display='none';">
+<div id="loginScreen" class="fixed inset-0 netflix-bg z-50 overflow-y-auto py-8 flex flex-col items-center transition-opacity duration-500">
+  <div class="text-center max-w-lg px-4 w-full">
+    <div class="flex justify-center mb-4">
+      <img src="images/school_logo.png" alt="Logo" class="h-14 sm:h-18 object-contain drop-shadow-sm" onerror="this.style.display='none';">
+    </div>
+    <h1 class="text-[#000000] text-xl sm:text-2xl font-bold tracking-wide mb-2">歡迎使用智慧關懷系統</h1>
+
+    <!-- 步驟指示器 -->
+    <div class="flex items-center justify-center gap-2 my-4" id="stepIndicator">
+      <div class="step-dot w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+      <div class="w-5 h-0.5 bg-slate-200"></div>
+      <div class="step-dot w-2.5 h-2.5 rounded-full bg-slate-300"></div>
+      <div class="w-5 h-0.5 bg-slate-200"></div>
+      <div class="step-dot w-2.5 h-2.5 rounded-full bg-slate-300"></div>
+      <div class="w-5 h-0.5 bg-slate-200"></div>
+      <div class="step-dot w-2.5 h-2.5 rounded-full bg-slate-300"></div>
     </div>
 
-    <h1 class="text-[#000000] text-2xl sm:text-3xl font-bold tracking-wide mb-6">歡迎使用智慧關懷系統</h1>
-    <p class="text-slate-500 text-sm mb-8">請先填寫基本資料，讓小黃更認識您</p>
-    
-    <!-- 註冊表單 -->
-    <div class="bg-white rounded-xl border border-slate-200 p-6 text-left space-y-5 shadow-sm">
-      <!-- 個人資訊 -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">姓名 <span class="text-red-400">*</span></label>
-          <input id="reg_name" type="text" placeholder="例：陳劉月香" 
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">暱稱 <span class="text-red-400">*</span></label>
-          <input id="reg_nickname" type="text" placeholder="例：阿香婆婆" 
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">性別 <span class="text-red-400">*</span></label>
-          <select id="reg_gender" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-            <option value="">請選擇</option>
-            <option value="male">男（阿公/爺爺）</option>
-            <option value="female">女（阿嬤/奶奶）</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">年齡</label>
-          <input id="reg_age" type="number" placeholder="例：74" 
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">居住地</label>
-          <input id="reg_location" type="text" placeholder="例：苗栗縣大湖鄉" 
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">身分證字號</label>
-          <input id="reg_id_number" type="password" placeholder="選填" autocomplete="off"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-        </div>
+    <!-- 步驟 1：基本資料 -->
+    <div id="regStep1" class="reg-step bg-white rounded-xl border border-slate-200 p-5 text-left shadow-sm">
+      <h2 class="text-sm font-bold text-slate-800 mb-1">步驟 1/4：基本資料</h2>
+      <p class="text-[11px] text-slate-400 mb-3">帶 * 為必填</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div><label class="block text-xs font-semibold text-slate-600 mb-1">姓名 *</label><input id="reg_name" type="text" placeholder="例：陳劉月香" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+        <div><label class="block text-xs font-semibold text-slate-600 mb-1">暱稱 *</label><input id="reg_nickname" type="text" placeholder="例：阿香婆婆" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+        <div><label class="block text-xs font-semibold text-slate-600 mb-1">性別 *</label><select id="reg_gender" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"><option value="">請選擇</option><option value="male">男（阿公/爺爺）</option><option value="female">女（阿嬤/奶奶）</option></select></div>
+        <div><label class="block text-xs font-semibold text-slate-600 mb-1">年齡</label><input id="reg_age" type="number" placeholder="例：74" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+        <div><label class="block text-xs font-semibold text-slate-600 mb-1">居住地</label><input id="reg_location" type="text" placeholder="例：苗栗縣大湖鄉" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+        <div><label class="block text-xs font-semibold text-slate-600 mb-1">身分證字號</label><input id="reg_id_number" type="password" placeholder="選填" autocomplete="off" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
       </div>
+      <div class="flex justify-end mt-5"><button onclick="regNextStep(2)" class="px-6 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition">繼續 →</button></div>
+    </div>
 
-      <!-- 可折疊：更多資訊 -->
-      <div class="border-t border-slate-100 pt-4 space-y-2">
-
-        <details class="group rounded-lg border border-slate-200 overflow-hidden">
-          <summary class="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-700 px-4 py-2.5 bg-slate-50 flex items-center gap-2">
-            <span class="transition-transform group-open:rotate-90 text-[10px]">▶</span> 緊急聯絡人
-          </summary>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">姓名</label>
-              <input id="reg_ec_name" type="text" placeholder="例：王小明" 
-                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">關係</label>
-              <input id="reg_ec_relation" type="text" placeholder="例：兒子" 
-                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">電話</label>
-              <input id="reg_ec_phone" type="tel" placeholder="例：0912345678" 
-                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-            </div>
-          </div>
-        </details>
-
-        <details class="group rounded-lg border border-slate-200 overflow-hidden">
-          <summary class="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-700 px-4 py-2.5 bg-slate-50 flex items-center gap-2">
-            <span class="transition-transform group-open:rotate-90 text-[10px]">▶</span> 醫療與用藥
-          </summary>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">慢性疾病</label>
-              <input id="reg_diseases" type="text" placeholder="例：高血壓、糖尿病" 
-                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">目前用藥</label>
-              <input id="reg_medications" type="text" placeholder="例：高血壓藥、降血糖藥" 
-                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">藥物過敏</label>
-              <input id="reg_drug_allergies" type="text" placeholder="例：青黴素" 
-                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">食物過敏</label>
-              <input id="reg_food_allergies" type="text" placeholder="例：花生、蝦" 
-                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-            </div>
-          </div>
-        </details>
-
-        <details class="group rounded-lg border border-slate-200 overflow-hidden">
-          <summary class="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-700 px-4 py-2.5 bg-slate-50 flex items-center gap-2">
-            <span class="transition-transform group-open:rotate-90 text-[10px]">▶</span> 生理與照護
-          </summary>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">行動能力</label>
-              <select id="reg_mobility" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-                <option value="">請選擇</option>
-                <option value="正常行走">正常行走</option>
-                <option value="需拐杖輔助">需拐杖輔助</option>
-                <option value="需輪椅">需輪椅</option>
-                <option value="臥床">臥床</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">飲食禁忌</label>
-              <input id="reg_dietary_restrictions" type="text" placeholder="例：低鈉、低糖" 
-                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-            </div>
-            <div class="flex items-center gap-3">
-              <label class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-                <input id="reg_dementia" type="checkbox" class="w-4 h-4 text-emerald-600 rounded">
-                有失智症
-              </label>
-              <label class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-                <input id="reg_wandering" type="checkbox" class="w-4 h-4 text-emerald-600 rounded">
-                有迷路紀錄
-              </label>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">照護備註</label>
-              <input id="reg_notes" type="text" placeholder="例：獨居、容易跌倒"
-                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-            </div>
-          </div>
-        </details>
-
-        <details class="group rounded-lg border border-slate-200 overflow-hidden">
-          <summary class="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-700 px-4 py-2.5 bg-slate-50 flex items-center gap-2">
-            <span class="transition-transform group-open:rotate-90 text-[10px]">▶</span> 🔊 感官與語言偏好
-          </summary>
-          <div class="grid grid-cols-1 gap-3 p-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">聽力狀況</label>
-              <select id="reg_hearing" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-                <option value="normal">聽力良好</option>
-                <option value="weak">聽力稍弱（需較大音量或放慢語速）</option>
-              </select>
-              <p class="text-[10px] text-slate-400 mt-1">若設定為「聽力稍弱」，系統會自動放大音量並放慢語速</p>
-            </div>
-          </div>
-        </details>
-
-        <details class="group rounded-lg border border-slate-200 overflow-hidden">
-          <summary class="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-700 px-4 py-2.5 bg-slate-50 flex items-center gap-2">
-            <span class="transition-transform group-open:rotate-90 text-[10px]">▶</span> 💬 興趣與話題偏好
-          </summary>
-          <div class="p-4 space-y-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-2">喜愛聊的話題（可多選）</label>
-              <div class="flex flex-wrap gap-2" id="interest_tags">
-                <button type="button" data-tag="過往回憶" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition" onclick="toggleTag(this)">過往回憶</button>
-                <button type="button" data-tag="戲曲" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition" onclick="toggleTag(this)">戲曲</button>
-                <button type="button" data-tag="烹飪" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition" onclick="toggleTag(this)">烹飪</button>
-                <button type="button" data-tag="寵物" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition" onclick="toggleTag(this)">寵物</button>
-                <button type="button" data-tag="日常閒聊" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition" onclick="toggleTag(this)">日常閒聊</button>
-                <button type="button" data-tag="運動健康" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition" onclick="toggleTag(this)">運動健康</button>
-                <button type="button" data-tag="家人" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition" onclick="toggleTag(this)">家人</button>
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">其他興趣（自由填寫）</label>
-              <input id="reg_interests_other" type="text" placeholder="例：種花、下棋、聽廣播"
-                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">想記住的事情 / 備忘</label>
-              <textarea id="reg_memo" rows="2" placeholder="例：孫子下禮拜要來看我、週三要去醫院回診"
-                        class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none resize-none"></textarea>
-            </div>
-          </div>
-        </details>
-
-        <details class="group rounded-lg border border-slate-200 overflow-hidden">
-          <summary class="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-700 px-4 py-2.5 bg-slate-50 flex items-center gap-2">
-            <span class="transition-transform group-open:rotate-90 text-[10px]">▶</span> 🔒 PIN 碼設定
-          </summary>
-          <div class="p-4 space-y-3">
-            <p class="text-[10px] text-slate-400">設定 4~6 位數字 PIN 碼，換裝置時驗證身分用</p>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">設定 PIN 碼</label>
-                <input id="reg_pin" type="password" inputmode="numeric" maxlength="6" placeholder="4~6 位數字"
-                       class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">確認 PIN 碼</label>
-                <input id="reg_pin_confirm" type="password" inputmode="numeric" maxlength="6" placeholder="再輸入一次"
-                       class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
-              </div>
-            </div>
-          </div>
-        </details>
-
+    <!-- 步驟 2：醫療與照護 -->
+    <div id="regStep2" class="reg-step hidden bg-white rounded-xl border border-slate-200 p-5 text-left shadow-sm">
+      <h2 class="text-sm font-bold text-slate-800 mb-1">步驟 2/4：醫療與照護</h2>
+      <p class="text-[11px] text-slate-400 mb-3">可先跳過，之後在看板補填</p>
+      <div class="space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div><label class="block text-xs font-semibold text-slate-600 mb-1">慢性疾病</label><input id="reg_diseases" type="text" placeholder="例：高血壓、糖尿病" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+          <div><label class="block text-xs font-semibold text-slate-600 mb-1">目前用藥</label><input id="reg_medications" type="text" placeholder="例：高血壓藥" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+          <div><label class="block text-xs font-semibold text-slate-600 mb-1">藥物過敏</label><input id="reg_drug_allergies" type="text" placeholder="例：青黴素" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+          <div><label class="block text-xs font-semibold text-slate-600 mb-1">食物過敏</label><input id="reg_food_allergies" type="text" placeholder="例：花生、蝦" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div><label class="block text-xs font-semibold text-slate-600 mb-1">緊急聯絡人</label><input id="reg_ec_name" type="text" placeholder="姓名" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+          <div><label class="block text-xs font-semibold text-slate-600 mb-1">關係</label><input id="reg_ec_relation" type="text" placeholder="兒子" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+          <div><label class="block text-xs font-semibold text-slate-600 mb-1">電話</label><input id="reg_ec_phone" type="tel" placeholder="0912345678" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div><label class="block text-xs font-semibold text-slate-600 mb-1">行動能力</label><select id="reg_mobility" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"><option value="">請選擇</option><option value="正常行走">正常行走</option><option value="需拐杖輔助">需拐杖輔助</option><option value="需輪椅">需輪椅</option><option value="臥床">臥床</option></select></div>
+          <div><label class="block text-xs font-semibold text-slate-600 mb-1">飲食禁忌</label><input id="reg_dietary_restrictions" type="text" placeholder="例：低鈉" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+        </div>
+        <div class="flex items-center gap-4">
+          <label class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer"><input id="reg_dementia" type="checkbox" class="w-4 h-4 rounded"> 有失智症</label>
+          <label class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer"><input id="reg_wandering" type="checkbox" class="w-4 h-4 rounded"> 有迷路紀錄</label>
+        </div>
+        <div><label class="block text-xs font-semibold text-slate-600 mb-1">照護備註</label><input id="reg_notes" type="text" placeholder="例：獨居" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+      </div>
+      <div class="flex justify-between mt-5">
+        <button onclick="regNextStep(1)" class="px-4 py-2 rounded-xl bg-slate-200 text-slate-600 font-bold text-sm">← 上一步</button>
+        <div class="flex gap-2"><button onclick="regNextStep(3)" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-500 font-bold text-sm">跳過</button><button onclick="regNextStep(3)" class="px-5 py-2 rounded-xl bg-emerald-500 text-white font-bold text-sm">繼續 →</button></div>
       </div>
     </div>
 
-    <!-- AI 警語同意書 -->
-    <div class="mt-6 bg-slate-50 p-5 rounded-lg border border-slate-200 text-left">
-      <div class="flex items-start gap-3">
-        <input type="checkbox" id="agreeCheckbox" class="mt-1.5 w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500">
-        <label for="agreeCheckbox" class="text-xs text-slate-600 leading-relaxed cursor-pointer flex flex-col gap-2">
-          <strong class="text-slate-800 text-sm">【系統使用須知與隱私保護宣告】</strong>
-          <div><strong class="text-slate-700">1. 非醫療診斷：</strong>本陪伴系統所提供之對話內容與健康生活摘要，僅供生活陪伴與日常健康參考，不具備醫療診斷或治療建議之功效。如有任何身體不適，請務必諮詢專業醫療人員。</div>
-          <div><strong class="text-slate-700">2. 隱私與個資保護：</strong>本系統重視隱私。您的語音與對話記錄將採用加密技術傳輸及儲存，且本系統不蒐集身分證字號、病歷號等敏感性個人資料。</div>
-          <div><strong class="text-slate-700">3. AI 限制宣告：</strong>本系統採用生成式 AI 技術，對話與摘要內容可能包含由 AI 生成之非絕對精確之資訊，實際狀況請以照護人員與家屬之親自確認為準。</div>
-          <div class="mt-1 text-emerald-600 font-semibold text-[11px]">閱讀完畢請勾選左側方框，即可點擊下方按鈕開始使用。</div>
-        </label>
+    <!-- 步驟 3：興趣與偏好 -->
+    <div id="regStep3" class="reg-step hidden bg-white rounded-xl border border-slate-200 p-5 text-left shadow-sm">
+      <h2 class="text-sm font-bold text-slate-800 mb-1">步驟 3/4：興趣與偏好</h2>
+      <p class="text-[11px] text-slate-400 mb-3">讓小黃知道你喜歡聊什麼</p>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-2">喜愛的話題（多選）</label>
+          <div class="flex flex-wrap gap-2" id="interest_tags">
+            <button type="button" data-tag="過往回憶" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 transition" onclick="toggleTag(this)">過往回憶</button>
+            <button type="button" data-tag="戲曲" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 transition" onclick="toggleTag(this)">戲曲</button>
+            <button type="button" data-tag="烹飪" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 transition" onclick="toggleTag(this)">烹飪</button>
+            <button type="button" data-tag="寵物" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 transition" onclick="toggleTag(this)">寵物</button>
+            <button type="button" data-tag="日常閒聊" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 transition" onclick="toggleTag(this)">日常閒聊</button>
+            <button type="button" data-tag="運動健康" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 transition" onclick="toggleTag(this)">運動健康</button>
+            <button type="button" data-tag="家人" class="px-3 py-1 rounded-full text-xs border border-slate-300 text-slate-600 transition" onclick="toggleTag(this)">家人</button>
+          </div>
+        </div>
+        <div><label class="block text-xs font-semibold text-slate-600 mb-1">其他興趣</label><input id="reg_interests_other" type="text" placeholder="例：種花、下棋" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+        <div><label class="block text-xs font-semibold text-slate-600 mb-1">備忘</label><textarea id="reg_memo" rows="2" placeholder="例：孫子下禮拜來看我" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none resize-none"></textarea></div>
+        <div><label class="block text-xs font-semibold text-slate-600 mb-1">聽力狀況</label><select id="reg_hearing" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"><option value="normal">聽力良好</option><option value="weak">聽力稍弱（需較大音量/慢語速）</option></select></div>
+      </div>
+      <div class="flex justify-between mt-5">
+        <button onclick="regNextStep(2)" class="px-4 py-2 rounded-xl bg-slate-200 text-slate-600 font-bold text-sm">← 上一步</button>
+        <div class="flex gap-2"><button onclick="regNextStep(4)" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-500 font-bold text-sm">跳過</button><button onclick="regNextStep(4)" class="px-5 py-2 rounded-xl bg-emerald-500 text-white font-bold text-sm">繼續 →</button></div>
       </div>
     </div>
 
-    <!-- 註冊按鈕 -->
-    <button onclick="registerAndStart()" 
-            class="mt-6 w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-lg transition shadow-lg">
-      開始使用
-    </button>
-    <p class="text-xs text-slate-400 mt-3 text-center">已有帳號？<a href="#" onclick="showPinLogin()" class="text-emerald-600 font-bold">PIN 碼登入</a></p>
+    <!-- 步驟 4：PIN + 同意 -->
+    <div id="regStep4" class="reg-step hidden bg-white rounded-xl border border-slate-200 p-5 text-left shadow-sm">
+      <h2 class="text-sm font-bold text-slate-800 mb-1">步驟 4/4：安全設定</h2>
+      <p class="text-[11px] text-slate-400 mb-3">PIN 碼用於換裝置時驗證</p>
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div><label class="block text-xs font-semibold text-slate-600 mb-1">PIN 碼（4~6位）</label><input id="reg_pin" type="password" inputmode="numeric" maxlength="6" placeholder="設定" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+        <div><label class="block text-xs font-semibold text-slate-600 mb-1">確認 PIN</label><input id="reg_pin_confirm" type="password" inputmode="numeric" maxlength="6" placeholder="再輸入一次" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+      </div>
+      <label class="flex items-start gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200 cursor-pointer">
+        <input type="checkbox" id="agreeCheckbox" class="mt-0.5 w-4 h-4 rounded">
+        <span class="text-[11px] text-slate-600 leading-relaxed">我已了解本系統為 AI 陪伴工具，不具醫療診斷功能。語音與對話內容將加密儲存，僅供陪伴與通知服務使用。</span>
+      </label>
+      <div class="flex justify-between mt-5">
+        <button onclick="regNextStep(3)" class="px-4 py-2 rounded-xl bg-slate-200 text-slate-600 font-bold text-sm">← 上一步</button>
+        <button onclick="registerAndStart()" class="px-6 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm shadow-lg transition">完成註冊 ✓</button>
+      </div>
+    </div>
+
+    <p class="text-xs text-slate-400 mt-4">已有帳號？<a href="#" onclick="showPinLogin()" class="text-emerald-600 font-bold">PIN 碼登入</a></p>
   </div>
 </div>
 
-
-<!-- ══════════════════════════════════════════
      1b. PIN 碼驗證畫面 (換裝置時顯示)
 ══════════════════════════════════════════ -->
 <div id="pinLoginScreen" class="hidden fixed inset-0 bg-white z-50 flex flex-col items-center justify-center px-4">
@@ -365,6 +240,34 @@
 <script>
 // ═══════════════════ 角色登入切換邏輯 ═══════════════════
 let currentUserId = null;  // 無預設值，必須透過註冊取得
+
+// ═══════════════════ 註冊分頁切換 ═══════════════════
+let _currentRegStep = 1;
+
+function regNextStep(step) {
+  // 步驟 1 驗證必填
+  if (_currentRegStep === 1 && step > 1) {
+    const name = document.getElementById('reg_name').value.trim();
+    const nickname = document.getElementById('reg_nickname').value.trim();
+    const gender = document.getElementById('reg_gender').value;
+    if (!name || !nickname || !gender) {
+      alert('請填寫姓名、暱稱與性別');
+      return;
+    }
+  }
+
+  // 切換步驟
+  document.querySelectorAll('.reg-step').forEach(el => el.classList.add('hidden'));
+  document.getElementById(`regStep${step}`).classList.remove('hidden');
+  _currentRegStep = step;
+
+  // 更新步驟指示器
+  const dots = document.querySelectorAll('.step-dot');
+  dots.forEach((dot, i) => {
+    dot.classList.toggle('bg-emerald-500', i < step);
+    dot.classList.toggle('bg-slate-300', i >= step);
+  });
+}
 
 // ═══════════════════ 興趣標籤切換 ═══════════════════
 function toggleTag(btn) {
