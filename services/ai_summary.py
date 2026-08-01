@@ -3,7 +3,7 @@ Life_Records/ai_service.py
 AI 摘要服務 — 適配新版 4 檔 JSON 資料格式
 
 從 DataManager 讀取短期對話歷史與長期記憶，
-呼叫 Ollama 生成結構化 JSON 每日摘要。
+呼叫 Amazon Bedrock 生成結構化 JSON 每日摘要。
 """
 
 import json
@@ -19,7 +19,7 @@ if _parent_dir not in sys.path:
 
 import config
 from core.data_manager import DataManager
-from ollama import chat
+from core.bedrock_client import chat_json as bedrock_chat_json
 
 # ── 載入 System Prompt ────────────────────────────────
 _prompt_path = config.LIFE_RECORDS_PROMPT_PATH
@@ -119,22 +119,16 @@ def get_elder_daily_summary(current_chat: str = None) -> dict:
     print("===========================")
 
     try:
-        response = chat(
-            model=config.OLLAMA_MODEL,
-            format='json',
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_input}
-            ],
-            options={'temperature': 0.0},
-            stream=False
+        result = bedrock_chat_json(
+            system=system_prompt,
+            user_text=user_input,
+            temperature=0.0,
+            max_tokens=1024,
         )
 
-        full_response = response['message']['content'].strip()
-        clean_json = full_response.replace("```json", "").replace("```", "").strip()
-        result = json.loads(clean_json)
-
         # 確保必要欄位存在
+        if not result:
+            return fallback
         if "overallSummary" not in result:
             result["overallSummary"] = fallback["overallSummary"]
         if "structuredData" not in result:
@@ -145,7 +139,7 @@ def get_elder_daily_summary(current_chat: str = None) -> dict:
         return result
 
     except Exception as model_err:
-        print(f"❌ Ollama 摘要生成失敗: {model_err}")
+        print(f"❌ Bedrock 摘要生成失敗: {model_err}")
         return fallback
 
 

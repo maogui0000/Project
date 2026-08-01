@@ -11,8 +11,9 @@ waitress==3.0.0
 flask==3.0.3
 line-bot-sdk==3.11.0
 
-# ── AI 對話 (Ollama) ─────────────────────────────────
-ollama==0.2.1
+# ── AI 對話 (Amazon Bedrock) ─────────────────────────
+boto3>=1.34.0
+botocore>=1.34.0
 requests==2.32.3
 
 # ── 語音辨識 ASR (Taiwan-Tongues-ASR + Whisper) ──────
@@ -23,8 +24,8 @@ soundfile>=0.12.1
 numpy==1.26.4
 opencc-python-reimplemented==0.1.7
 
-# ── 語音辨識 STT (備援本地 Whisper) ──────────────────
-openai-whisper==20231117
+# ── 語音辨識 STT (備援本地 Whisper — EC2 部署可不裝) ──
+# openai-whisper==20231117
 SpeechRecognition==3.10.4
 
 # ── 語音合成 TTS ─────────────────────────────────────

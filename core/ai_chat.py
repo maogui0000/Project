@@ -1,4 +1,3 @@
-from ollama import chat
 import os
 import sys
 import re
@@ -10,6 +9,7 @@ if _project_dir not in sys.path:
     sys.path.insert(0, _project_dir)
 
 import config
+from core.bedrock_client import chat as bedrock_chat, chat_stream as bedrock_chat_stream
 
 # 1. 讀取系統提示詞
 with open(config.SYSTEM_PROMPT_PATH, 'r', encoding='utf-8') as f:
@@ -44,7 +44,6 @@ _FULL_SENTENCE_VIOLATIONS = [
 def _sanitize_reply(text: str) -> str:
     """
     後處理：過濾 LLM 回覆中違反能力白名單的表述。
-    小模型容易忽略 system prompt 的約束，這裡用正則做最後一道防線。
     """
     if not text:
         return text
@@ -197,44 +196,44 @@ def get_combined_system_prompt(elder_id: str = "elder_001"):
     )
     return combined_prompt
 
+
+# ═══════════════════════════════════════════════════════
+# 對外介面：使用 Bedrock 取代 Ollama
+# ═══════════════════════════════════════════════════════
+
+# emoji 過濾
+_emoji_re = re.compile(
+    r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF'
+    r'\U0001F1E0-\U0001F1FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FAFF'
+    r'\U00002702-\U000027B0\U00002600-\U000026FF\U0000FE0F\U0000200D\U000020E3]+'
+)
+
+
 def ask_ollama(text, elder_id: str = "elder_001"):
-    # 每次對話時都重新抓取最新的組合提示詞（含使用者性別資訊）
+    """非串流對話（保留函式名以維持下游相容性）"""
     current_system_prompt = get_combined_system_prompt(elder_id=elder_id)
-    
-    import re
-    _emoji_re = re.compile(
-        r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF'
-        r'\U0001F1E0-\U0001F1FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FAFF'
-        r'\U00002702-\U000027B0\U00002600-\U000026FF\U0000FE0F\U0000200D\U000020E3]+'
+
+    raw_reply = bedrock_chat(
+        system=current_system_prompt,
+        user_text=text,
+        temperature=0.0,
+        max_tokens=512,
     )
-    
-    response = chat(
-        model=config.OLLAMA_MODEL,
-        messages=[
-            {"role": "system", "content": current_system_prompt},
-            {'role': 'user', 'content': text}
-        ],
-        options={'temperature': 0.0},
-        stream=False,
-    )
-    raw_reply = _emoji_re.sub('', response['message']['content'])
+    raw_reply = _emoji_re.sub('', raw_reply)
     return _sanitize_reply(raw_reply)
 
+
 def ask_ollama_stream(text):
-    # 串流模式也同步動態更新
+    """串流對話（印到 stdout，供 CLI 測試用）"""
     current_system_prompt = get_combined_system_prompt()
-    
-    stream = chat(
-        model=config.OLLAMA_MODEL,
-        messages=[
-            {"role": "system", "content": current_system_prompt},
-            {'role': 'user', 'content': text}
-        ],
-        options={'temperature': 0.0},
-        stream=True,
-    )
-    for chunk in stream:
-        print(chunk['message']['content'], end='', flush=True)
+
+    for token in bedrock_chat_stream(
+        system=current_system_prompt,
+        user_text=text,
+        temperature=0.0,
+        max_tokens=512,
+    ):
+        print(token, end='', flush=True)
 
 
 def ask_ollama_stream_sentences(text, model=None, elder_id: str = "elder_001"):
@@ -248,8 +247,6 @@ def ask_ollama_stream_sentences(text, model=None, elder_id: str = "elder_001"):
         for sentence in ask_ollama_stream_sentences("你好"):
             tts_speak(sentence)
     """
-    if model is None:
-        model = config.OLLAMA_MODEL
     current_system_prompt = get_combined_system_prompt(elder_id=elder_id)
     
     # 句子結束符號
@@ -258,28 +255,14 @@ def ask_ollama_stream_sentences(text, model=None, elder_id: str = "elder_001"):
     SOFT_BREAKS = {'，', '、', '；', ',', ';', '：', ':'}
     MAX_SOFT_BREAK_LEN = 30  # 超過此長度遇到軟斷點也切句
     
-    # emoji 過濾
-    import re
-    _emoji_re = re.compile(
-        r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF'
-        r'\U0001F1E0-\U0001F1FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FAFF'
-        r'\U00002702-\U000027B0\U00002600-\U000026FF\U0000FE0F\U0000200D\U000020E3]+'
-    )
-    
-    stream = chat(
-        model=model,
-        messages=[
-            {"role": "system", "content": current_system_prompt},
-            {'role': 'user', 'content': text}
-        ],
-        options={'temperature': 0.0},
-        stream=True,
-    )
-    
     buffer = ""
     
-    for chunk in stream:
-        token = chunk['message']['content']
+    for token in bedrock_chat_stream(
+        system=current_system_prompt,
+        user_text=text,
+        temperature=0.0,
+        max_tokens=1024,
+    ):
         token = _emoji_re.sub('', token)  # 過濾 emoji
         buffer += token
         
@@ -327,8 +310,9 @@ def ask_ollama_stream_sentences(text, model=None, elder_id: str = "elder_001"):
         if sanitized:
             yield sanitized
 
+
 if __name__ == "__main__":
-    print("【本地對話模式啟動】（已成功載入動態天氣環境系統）請輸入文字：")
+    print("【本地對話模式啟動】（已連線 AWS Bedrock）請輸入文字：")
     while 1:
         user_input = input("\n你：")
         print("AI：", end="")

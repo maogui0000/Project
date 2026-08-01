@@ -25,7 +25,7 @@ import config
 # 匯入 AI 對話函數
 try:
     from core.ai_chat import ask_ollama
-    print("✅ [記憶控制] 成功對接 Ollama AI 模型接口！")
+    print("✅ [記憶控制] 成功對接 Bedrock AI 模型接口！")
 except ImportError as e:
     print(f"⚠️ [記憶控制] 無法匯入 AI_Chat ({e})")
     ask_ollama = None
@@ -311,14 +311,12 @@ class MemoryController:
         user_input = f"{prompt}\n\n當前系統時間：{current_time_str}\n長者說的話：「{user_text}」"
 
         try:
-            from ollama import chat as _ollama_chat
-            response = _ollama_chat(
-                model=config.OLLAMA_MODEL,
-                messages=[{"role": "user", "content": user_input}],
-                options={'temperature': 0.0},
-                stream=False,
+            from core.bedrock_client import chat as bedrock_chat
+            raw = bedrock_chat(
+                user_text=user_input,
+                temperature=0.0,
+                max_tokens=512,
             )
-            raw = response['message']['content']
             # 強力 JSON 提取：移除各種可能的包裝
             clean = raw.strip()
             if '```' in clean:

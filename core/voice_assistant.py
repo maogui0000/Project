@@ -6,7 +6,7 @@ voice_assistant.py
 完整流程：
   說「小黃小黃」
     → 播放「有何吩咐」（三語同步合成並播放）
-    → 錄音 → 台灣話 ASR (speech_tool.audio_to_text) → MemoryController + Ollama
+    → 錄音 → 台灣話 ASR (speech_tool.audio_to_text) → MemoryController + Bedrock
     → 呼叫 國/台/客 TTS (speech_tool.text_to_speech_and_play) 播放回覆
     → 繼續對話，直到說「掰掰」
     → 恢復喚醒詞監聽
@@ -250,26 +250,23 @@ class VoiceAssistant:
         except Exception as e:
             print(f"[TTS] 錯誤：{e}")
 
-    # ── AI 對話（Ollama）──────────────────────────────
+    # ── AI 對話（Bedrock）──────────────────────────────
 
     def _ask_ollama(self, prompt: str) -> str:
-        """非串流模式呼叫 Ollama（供 app.py API 使用）"""
+        """非串流模式呼叫 Bedrock（保留函式名以維持相容性）"""
         try:
-            from ollama import chat
+            from core.bedrock_client import chat as bedrock_chat
             from core.ai_chat import get_combined_system_prompt
 
             current_prompt = get_combined_system_prompt()
-            response = chat(
-                model=config.OLLAMA_MODEL,
-                messages=[
-                    {"role": "system", "content": current_prompt},
-                    {"role": "user",   "content": prompt},
-                ],
-                stream=False,
+            return bedrock_chat(
+                system=current_prompt,
+                user_text=prompt,
+                temperature=0.0,
+                max_tokens=512,
             )
-            return response["message"]["content"].strip()
         except Exception as e:
-            print(f"[Ollama] 錯誤：{e}")
+            print(f"[Bedrock] 錯誤：{e}")
             return "抱歉，我現在沒辦法回應，請稍後再試。"
 
     def _ask_ollama_streaming(self, prompt: str) -> str:
@@ -279,7 +276,7 @@ class VoiceAssistant:
             full_reply = stream_speak(sentence_gen)
             return full_reply
         except Exception as e:
-            print(f"[Ollama 串流] 錯誤：{e}")
+            print(f"[Bedrock 串流] 錯誤：{e}")
             return "抱歉，我現在沒辦法回應，請稍後再試。"
 
 

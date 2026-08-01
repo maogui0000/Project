@@ -13,7 +13,13 @@ import json
 import threading
 import numpy as np
 import sounddevice as sd
-import torch
+
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+    print("[喚醒詞] ⚠️ torch 未安裝，本地 ASR 喚醒詞偵測不可用（Web API 模式不影響）")
 
 # ── OpenCC 延遲導入（防止 DLL 載入失敗阻斷啟動）─────
 try:
@@ -53,6 +59,9 @@ def _ensure_asr_loaded():
     global model, processor, ASR_AVAILABLE
     if ASR_AVAILABLE and model is not None:
         return True
+    
+    if not TORCH_AVAILABLE:
+        return False
     
     try:
         import speech.asr_tts
@@ -230,7 +239,7 @@ class WakeWordDetector:
         _ensure_asr_loaded()
         
         # 方式一：Taiwan-Tongues-ASR 本地模型
-        if ASR_AVAILABLE and model is not None and processor is not None:
+        if TORCH_AVAILABLE and ASR_AVAILABLE and model is not None and processor is not None:
             try:
                 _device = "cuda" if torch.cuda.is_available() else "cpu"
                 inputs = processor(

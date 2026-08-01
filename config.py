@@ -57,11 +57,17 @@ ASR_SILENCE_THRESHOLD = float(os.getenv("ASR_SILENCE_THRESHOLD", "0.01"))
 ASR_SILENCE_FRAME_MS = int(os.getenv("ASR_SILENCE_FRAME_MS", "30"))
 
 # ═══════════════════════════════════════════════════════
-# Ollama AI 對話設定
+# AWS Bedrock AI 對話設定
 # ═══════════════════════════════════════════════════════
 
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+
+# Bedrock 模型 ID（預設使用 Claude Sonnet 4）
+# 注意：需使用 inference profile ID，非裸模型 ID
+# 其他選項：
+#   us.anthropic.claude-sonnet-4-20250514-v1:0    （Sonnet 4，推薦）
+#   us.anthropic.claude-haiku-4-5-20251001-v1:0   （Haiku 4.5，快速便宜）
+BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-sonnet-4-20250514-v1:0")
 
 # ═══════════════════════════════════════════════════════
 # TTS 語音合成設定

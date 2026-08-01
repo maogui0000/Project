@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
     print("=" * 50)
     print("  雲湧智生 — 智慧長照關懷系統 後端已啟動")
     print(f"  API 伺服器：http://{config.API_HOST}:{config.API_PORT}")
-    print(f"  AI 模型：{config.OLLAMA_MODEL}")
+    print(f"  AI 模型：{config.BEDROCK_MODEL_ID}")
     print(f"  資料目錄：data/")
     print("=" * 50)
     
@@ -500,7 +500,7 @@ def is_session_analysis_running(elder_id: str = "elder_001") -> bool:
 def _detect_farewell(user_text: str) -> bool:
     """用 LLM 判斷使用者是否想結束對話"""
     try:
-        from ollama import chat as ollama_chat
+        from core.bedrock_client import chat as bedrock_chat
         
         # 從檔案讀取提示詞
         try:
@@ -509,16 +509,12 @@ def _detect_farewell(user_text: str) -> bool:
         except Exception:
             base_prompt = "判斷使用者是否想結束對話。只回答 yes 或 no。"
         
-        response = ollama_chat(
-            model=config.OLLAMA_MODEL,
-            messages=[{
-                "role": "user",
-                "content": f"{base_prompt}\n\n使用者說：「{user_text}」"
-            }],
-            options={'temperature': 0.0},
-            stream=False,
+        answer = bedrock_chat(
+            user_text=f"{base_prompt}\n\n使用者說：「{user_text}」",
+            temperature=0.0,
+            max_tokens=16,
         )
-        answer = response["message"]["content"].strip().lower()
+        answer = answer.strip().lower()
         is_farewell = "yes" in answer
         print(f"👋 [告別偵測] 「{user_text[:30]}」→ LLM 判斷：{'結束' if is_farewell else '繼續'}")
         return is_farewell

@@ -1,0 +1,17 @@
+[Unit]
+Description=雲湧智生 智慧長照關懷系統 API Server
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Project
+ExecStart=/home/ubuntu/Project/venv/bin/python -m uvicorn app:app --host 0.0.0.0 --port 8001
+Restart=always
+RestartSec=5
+Environment=PATH=/home/ubuntu/Project/venv/bin:/usr/local/bin:/usr/bin
+StandardOutput=append:/home/ubuntu/Project/logs/api_server.log
+StandardError=append:/home/ubuntu/Project/logs/api_server.log
+
+[Install]
+WantedBy=multi-user.target

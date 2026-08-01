@@ -542,8 +542,7 @@ class DataManager:
         - 1~3: 不重要（無意義語音、辨識錯誤、重複問候）
         """
         try:
-            from ollama import chat
-            import config
+            from core.bedrock_client import chat as bedrock_chat
             
             # 從檔案讀取提示詞
             try:
@@ -554,14 +553,13 @@ class DataManager:
             
             prompt = f"{base_prompt}\n\n長者說：「{user_text}」"
 
-            response = chat(
-                model=config.OLLAMA_MODEL,
-                messages=[{"role": "user", "content": prompt}],
-                options={'temperature': 0.0},
-                stream=False,
+            result = bedrock_chat(
+                user_text=prompt,
+                temperature=0.0,
+                max_tokens=16,
             )
             
-            result = response["message"]["content"].strip()
+            result = result.strip()
             # 提取數字
             import re
             numbers = re.findall(r'\d+', result)
