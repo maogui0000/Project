@@ -1855,6 +1855,78 @@ async def get_stream_audio(index: int):
 # 圖片資源
 app.mount("/images", StaticFiles(directory=config.IMAGES_DIR), name="images")
 
+# ═══════════════════════════════════════════════════════
+# LINE Bot Webhook（直接在 FastAPI 中處理）
+# ═══════════════════════════════════════════════════════
+from linebot import LineBotApi, WebhookHandler
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import MessageEvent, TextMessage, AudioMessage, TextSendMessage
+
+_line_bot_api = LineBotApi(config.LINE_CHANNEL_ACCESS_TOKEN or 'l+QP6SuTqqETfAdeY3bJZSSU1ZmF6eBoxeOnWd/mlQpx7E7ihH7mIMR/hYmdSDimr3OWejX0c8kE0MY5LitY4WAHwIyn8fEtFfCT+57kFUayX6ovFZe34BAeMAN6ZcT+53FyVfF1aeb/GhGqihypoQdB04t89/1O/w1cDnyilFU=')
+_line_handler = WebhookHandler(config.LINE_CHANNEL_SECRET or '31abac3ba0956fe48e14d63bc0077a21')
+
+@app.post("/callback")
+async def line_webhook(request: Request):
+    """LINE Bot Webhook 接收端點"""
+    signature = request.headers.get('X-Line-Signature', '')
+    body = (await request.body()).decode('utf-8')
+    
+    try:
+        _line_handler.handle(body, signature)
+    except InvalidSignatureError:
+        raise HTTPException(status_code=400, detail="Invalid signature")
+    return {"status": "ok"}
+
+@_line_handler.add(MessageEvent, message=TextMessage)
+def _handle_line_text(event):
+    """LINE 文字訊息處理"""
+    user_id = event.source.user_id
+    text = event.message.text.strip()
+    if not text:
+        return
+
+    # 取得自己的 User ID
+    if text.lower() in ("我的id", "我的id", "id", "myid", "我的 id"):
+        _line_bot_api.reply_message(event.reply_token, TextSendMessage(
+            text=f"📋 你的 LINE User ID：\n{user_id}\n\n請將此 ID 填入註冊頁面的 LINE 推播設定欄位。"
+        ))
+        return
+
+    # 查看今日動態
+    if text in ("今日動態", "查看動態", "動態"):
+        try:
+            # 找到有資料的長者
+            import glob
+            for f in glob.glob(os.path.join(config.DATA_DIR, 'elder_*/dashboard_logs.json')):
+                eid = os.path.basename(os.path.dirname(f))
+                dm = DataManager(elder_id=eid)
+                dashboard = dm.get_dashboard_logs()
+                summary = dashboard.get("today_summary", {})
+                metrics = summary.get("metrics", {})
+                msg = f"📊 【今日動態】\n{summary.get('text','今天還沒有互動')}\n\n🍚 飲食：{metrics.get('diet','未提及')}\n💊 用藥：{metrics.get('medication','未提及')}\n🎭 情緒：{metrics.get('emotion','未檢測')}"
+                _line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
+                return
+        except Exception as e:
+            _line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠️ 無法取得動態：{e}"))
+        return
+
+    # 其他文字 → 存為留言
+    try:
+        import glob
+        for f in glob.glob(os.path.join(config.DATA_DIR, 'elder_*/elder_profile.json')):
+            eid = os.path.basename(os.path.dirname(f))
+            dm = DataManager(elder_id=eid)
+            profile = dm.get_profile()
+            ec = profile.get("emergency_contact", {})
+            sender_name = ec.get("name", "家人") or "家人"
+            dm.add_message(sender_name=sender_name, content_type="text", content_text=text)
+            _line_bot_api.reply_message(event.reply_token, TextSendMessage(
+                text=f"✅ 留言已送出！等長輩上線時會通知他喔。\n\n📝 你的留言：「{text[:50]}」"
+            ))
+            return
+    except Exception as e:
+        _line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠️ 留言失敗：{e}"))
+
 # 留言語音檔（照護者傳的語音留言）
 _audio_data_dir = os.path.join(config.DATA_DIR)
 if os.path.exists(_audio_data_dir):
