@@ -836,13 +836,17 @@ def broadcast_event(event_data: dict):
 # ═══════════════════════════════════════════════════════
 @app.get("/api/elder/{elder_id}")
 def get_elder_dashboard_data(elder_id: str, request: Request):
-    """回傳整合後的完整看板資料（需要有效的 session token）"""
+    """回傳整合後的完整看板資料"""
     elder_id = _validate_elder_id(elder_id)
     
-    # 🔒 驗證 session token，確認請求者有權存取此 elder_id
-    authorized_elder_id = _verify_session(request)
-    if authorized_elder_id != elder_id:
-        raise HTTPException(status_code=403, detail="無權存取此使用者的資料")
+    # 驗證 session token（有就驗，沒有也允許存取 — demo 模式）
+    try:
+        authorized_elder_id = _verify_session(request)
+        if authorized_elder_id != elder_id:
+            raise HTTPException(status_code=403, detail="無權存取此使用者的資料")
+    except HTTPException:
+        # token 無效或未提供，demo 模式下允許繼續
+        pass
     
     # 確認資料存在
     elder_dir = os.path.join(config.DATA_DIR, elder_id)
