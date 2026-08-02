@@ -925,6 +925,21 @@ async def handle_chat_stream(req: ChatStreamRequest):
         except Exception as e:
             print(f"⚠️ [背景] update_memories: {e}")
         
+        # 2b. 額外檢查：如果文字中有明確提醒意圖關鍵詞，確保 LINE 通知發出
+        _reminder_keywords = ['提醒我', '記得提醒', '幫我記', '等一下提醒', '提醒一下', '通知我', '跟家人說', '幫我跟', '告訴家人', '跟女兒說', '跟兒子說']
+        for _kw in _reminder_keywords:
+            if _kw in u_text:
+                try:
+                    from services.weather_cron import _send_line_push
+                    _dm2 = DataManager(elder_id=eid)
+                    _profile2 = _dm2.get_profile()
+                    _name2 = _profile2.get("personal_info", {}).get("nickname") or eid
+                    _send_line_push(f"⏰ 【{_name2} 提醒】\n長者說：「{u_text[:80]}」")
+                    print(f"📢 [提醒 LINE] 已推播：{u_text[:30]}")
+                except Exception as _e2:
+                    print(f"⚠️ [提醒 LINE] 推播失敗: {_e2}")
+                break
+
         # 3. 廣播給 dashboard
         broadcast_event({"type": "speech_interaction", "elder_id": eid, "user_text": u_text, "ai_reply": ai_text, "summary_updated": True})
         
