@@ -341,9 +341,6 @@ class MemoryController:
         用藥、飲食、症狀、慢性疾病、活動、睡眠
         """
         default = {"medication": {"status": "未提及", "name": None, "time": None}, "diet": None, "symptom": None, "chronic_disease": None, "activity": None, "sleep": None, "reminder": None}
-        
-        if ask_ollama is None:
-            return default
 
         try:
             with open(config.HEALTH_ANALYSIS_PROMPT_PATH, 'r', encoding='utf-8') as f:
