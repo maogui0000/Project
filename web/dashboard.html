@@ -188,7 +188,7 @@ function renderHome() {
       <div class="card p-4 text-center"><div class="text-2xl mb-1">💊</div><div class="text-xs text-slate-400">用藥</div><div class="text-sm font-bold ${medColor}">${medStatus}</div></div>
       <div class="card p-4 text-center"><div class="text-2xl mb-1">${emotionIcon}</div><div class="text-xs text-slate-400">情緒</div><div class="text-sm font-bold text-cyan-400">${emotion}</div></div>
       <div class="card p-4 text-center"><div class="text-2xl mb-1">💬</div><div class="text-xs text-slate-400">互動</div><div class="text-sm font-bold text-white">${stats.total_turns || 0} 次</div></div>
-      <div class="card p-4 text-center"><div class="text-2xl mb-1">📡</div><div class="text-xs text-slate-400">LINE</div><div class="text-sm font-bold ${elderData.line_notification_status?.is_sent ? 'text-emerald-400' : 'text-slate-500'}">${elderData.line_notification_status?.is_sent ? '已推播' : '未推播'}</div></div>
+      <div class="card p-4 text-center"><div class="text-2xl mb-1">📡</div><div class="text-xs text-slate-400">LINE</div><div class="text-sm font-bold ${elderData.line_settings?.enabled !== false ? 'text-emerald-400' : 'text-slate-500'}">${elderData.line_settings?.enabled !== false ? '推播開啟' : '推播關閉'}</div></div>
     </div>
     ${(!m.medication_taken && stats.total_turns > 0) ? '<div class="card p-3 border-amber-500/50 bg-amber-500/10 mb-4"><span class="text-amber-300 text-sm font-bold">⚠️ 今日尚未確認服藥</span></div>' : ''}
     ${(emotion === '難過' || emotion === '生氣') ? '<div class="card p-3 border-red-500/50 bg-red-500/10 mb-4"><span class="text-red-300 text-sm font-bold">⚠️ 長者情緒低落，建議關心</span></div>' : ''}

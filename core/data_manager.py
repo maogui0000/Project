@@ -738,6 +738,7 @@ class DataManager:
             "interaction_stats": logs.get("interaction_stats", {}),
             "timeline_events": logs.get("timeline_events", []),
             "line_notification_status": logs.get("line_notification_status", {}),
+            "line_settings": profile.get("line_settings", {"enabled": False, "user_id": ""}),
             "emotion_summary": emotion_summary,
             "emotion_history": self.get_emotion_history(),
         }
