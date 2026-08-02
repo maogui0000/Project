@@ -428,7 +428,7 @@ function renderReminders() {
 }
 async function loadReminders() {
   try {
-    const resp = await fetch(\`/api/reminders/\${elderId}/pending\`);
+    const resp = await fetch(`/api/reminders/${elderId}/pending`);
     const data = await resp.json();
     const list = document.getElementById('remindersList');
     const reminders = data.reminders || [];
@@ -436,12 +436,12 @@ async function loadReminders() {
       list.innerHTML = '<p class="text-sm text-slate-500">目前沒有待處理的提醒</p>';
       return;
     }
-    list.innerHTML = reminders.map(r => \`
+    list.innerHTML = reminders.map(r => `
       <div class="card p-3 flex justify-between items-center">
-        <div><div class="text-sm text-white">\${r.content}</div><div class="text-xs text-slate-500">\${r.created_at?.slice(0,16) || ''}</div></div>
-        <span class="text-xs px-2 py-0.5 rounded \${r.status==='pending'?'bg-amber-500/20 text-amber-300':'bg-emerald-500/20 text-emerald-300'}">\${r.status==='pending'?'⏰ 待通知':'✅ 已通知'}</span>
+        <div><div class="text-sm text-white">${r.content}</div><div class="text-xs text-slate-500">${r.created_at?.slice(0,16) || ''}</div></div>
+        <span class="text-xs px-2 py-0.5 rounded ${r.status==='pending'?'bg-amber-500/20 text-amber-300':'bg-emerald-500/20 text-emerald-300'}">${r.status==='pending'?'⏰ 待通知':'✅ 已通知'}</span>
       </div>
-    \`).join('');
+    `).join('');
   } catch(e) { document.getElementById('remindersList').innerHTML = '<p class="text-red-400 text-sm">載入失敗</p>'; }
 }
 async function addNewReminder() {
@@ -449,7 +449,7 @@ async function addNewReminder() {
   const content = input.value.trim();
   if (!content) return;
   try {
-    await fetch(\`/api/reminders/\${elderId}/add\`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({content}) });
+    await fetch(`/api/reminders/${elderId}/add`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({content}) });
     input.value = '';
     loadReminders();
   } catch(e) { alert('新增失敗'); }
