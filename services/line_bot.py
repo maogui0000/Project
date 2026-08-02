@@ -61,6 +61,14 @@ def handle_text_message(event):
         _send_today_summary(event.reply_token)
         return
 
+    # 特殊指令：取得自己的 LINE User ID
+    if text in ("我的ID", "我的id", "ID", "id", "myid"):
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=f"📋 你的 LINE User ID：\n{user_id}\n\n請將此 ID 填入註冊頁面的 LINE 推播設定欄位。")
+        )
+        return
+
     # 一般文字 → 存為留言
     try:
         from core.data_manager import DataManager

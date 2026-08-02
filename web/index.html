@@ -94,6 +94,15 @@
           <label class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer"><input id="reg_wandering" type="checkbox" class="w-4 h-4 rounded"> 有迷路紀錄</label>
         </div>
         <div><label class="block text-xs font-semibold text-slate-600 mb-1">照護備註</label><input id="reg_notes" type="text" placeholder="例：獨居" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none"></div>
+        <div class="border-t border-slate-200 pt-3 mt-2">
+          <label class="block text-xs font-semibold text-slate-600 mb-2">📱 LINE 推播設定</label>
+          <div class="flex items-center gap-2 mb-2">
+            <input id="reg_line_enabled" type="checkbox" class="w-4 h-4 rounded" checked>
+            <span class="text-xs text-slate-600">啟用 LINE 每日摘要推播</span>
+          </div>
+          <input id="reg_line_user_id" type="text" placeholder="LINE User ID（例：U8ea3d1fa...）" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none">
+          <p class="text-[10px] text-slate-400 mt-1">可從 LINE Bot 聊天中輸入「我的ID」取得</p>
+        </div>
       </div>
       <div class="flex justify-between mt-5">
         <button onclick="regNextStep(1)" class="px-4 py-2 rounded-xl bg-slate-200 text-slate-600 font-bold text-sm">← 上一步</button>
@@ -383,6 +392,9 @@ async function registerAndStart() {
     has_dementia: document.getElementById('reg_dementia').checked,
     has_wandering_history: document.getElementById('reg_wandering').checked,
     care_notes: document.getElementById('reg_notes').value.trim(),
+    // LINE 推播設定
+    line_enabled: document.getElementById('reg_line_enabled').checked,
+    line_user_id: document.getElementById('reg_line_user_id').value.trim(),
     // 感官偏好
     hearing_status: document.getElementById('reg_hearing').value || 'normal',
     // 興趣話題

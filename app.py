@@ -1260,6 +1260,9 @@ class ElderProfileRequest(BaseModel):
     memo: str = ""
     # PIN 碼（新增）
     pin: str = ""
+    # LINE 推播設定（新增）
+    line_enabled: bool = True
+    line_user_id: str = ""
 
 
 def _hash_id_number(id_number: str) -> str:
@@ -1390,6 +1393,16 @@ def save_elder_profile(req: ElderProfileRequest):
         # 設定 PIN 碼（新增）
         if req.pin and len(req.pin) >= 4:
             elder_dm.set_pin(req.pin)
+
+        # 儲存 LINE 推播設定（新增）
+        if req.line_user_id:
+            profile = elder_dm.get_profile()
+            if "line_settings" not in profile:
+                profile["line_settings"] = {}
+            profile["line_settings"]["enabled"] = req.line_enabled
+            profile["line_settings"]["user_id"] = req.line_user_id
+            profile["meta"]["last_updated"] = datetime.now().isoformat()
+            elder_dm._save(elder_dm.profile_path, profile)
 
         # 新用戶註冊成功，發行 session token
         token = _generate_session_token(elder_id)
