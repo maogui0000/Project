@@ -1,4 +1,19 @@
 {
   "elder_id": "elder_demo_user_001",
-  "reminders": []
+  "reminders": [
+    {
+      "content": "提醒下午三點吃藥",
+      "requested_by": "長者",
+      "created_at": "2026-08-02T11:02:03.816652",
+      "status": "pending",
+      "notified": false
+    },
+    {
+      "content": "提醒五點要做運動",
+      "requested_by": "長者",
+      "created_at": "2026-08-02T11:02:03.821589",
+      "status": "pending",
+      "notified": false
+    }
+  ]
 }

@@ -3,7 +3,7 @@
   "report_date": "2026-08-02",
   "line_notification_status": {
     "trigger_time": "19:00:00",
-    "is_sent": false
+    "is_sent": true
   },
   "today_summary": {
     "text": "",

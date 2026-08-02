@@ -1,0 +1,123 @@
+# Implementation Plan
+
+- [ ] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - LINE Push Silent Failure
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the 5 interacting bug conditions
+  - **Scoped PBT Approach**: Scope the property to the concrete failing cases:
+    - `_send_line_push("test")` with empty/expired token returns False AND no log file written
+    - `_execute_daily_push()` sends even when `is_sent == True` (no duplicate guard)
+    - `DataManager("elder_178546685908e66b")` creates orphan directory (mismatched elder ID)
+    - Pending reminders in `reminders.json` remain `notified: False` indefinitely (no push loop)
+  - Test assertions should match Expected Behavior (requirements 2.1–2.5):
+    - Valid credentials → push succeeds and returns True
+    - Invalid credentials → push returns False AND structured log written to `logs/line_bot.log`
+    - `is_sent == True` → daily push is skipped (no duplicate)
+    - Elder ID from config matches actual `data/` directory
+    - Pending reminder with reached time → LINE push triggered and `notified` set True
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bugs exist)
+  - Document counterexamples found:
+    - `_send_line_push()` returns False without persistent logging
+    - `_execute_daily_push()` ignores `is_sent` flag
+    - `TARGET_ELDER_ID` doesn't match `data/elder_demo_user_001`
+    - No background task checks `reminders.json`
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+
+- [ ] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Non-Push Operations Unchanged
+  - **IMPORTANT**: Follow observation-first methodology
+  - **GOAL**: Capture baseline behavior of all non-push operations on UNFIXED code
+  - Observe on UNFIXED code:
+    - LINE webhook text message handling stores message correctly in `data/elder_demo_user_001/messages.json`
+    - `fetch_and_generate_prompt()` generates valid `Environmental_Prompts.txt`
+    - Dashboard API `/api/elder/{elder_id}` returns complete elder data structure
+    - Chat API `/api/chat/stream` produces valid streaming responses
+    - Reminder creation via `add_reminder()` writes to `reminders.json` correctly
+  - Write property-based tests capturing observed behavior:
+    - For all valid elder IDs in `data/`, `DataManager(elder_id).get_elder_profile()` returns valid JSON with expected keys
+    - For all text messages via webhook, message is stored in correct elder's `messages.json`
+    - `fetch_and_generate_prompt()` always produces non-empty `Environmental_Prompts.txt`
+    - Dashboard API returns consistent schema for any existing elder
+    - `add_reminder()` always appends to `reminders.json` with correct structure
+  - Verify tests PASS on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [ ] 3. Fix LINE notification push failure
+
+  - [ ] 3.1 Add `LINE_TARGET_ELDER_ID` to `config.py`
+    - Add `LINE_TARGET_ELDER_ID = os.getenv("LINE_TARGET_ELDER_ID", "elder_demo_user_001")`
+    - This becomes the single source of truth for the webhook-associated elder ID
+    - _Bug_Condition: isBugCondition(input) where input.elder_id == "elder_178546685908e66b" AND NOT exists(data_dir / "elder_178546685908e66b")_
+    - _Expected_Behavior: System uses config-based elder ID matching actual data/ directory_
+    - _Preservation: No existing config variables changed, only addition_
+    - _Requirements: 1.1, 2.1_
+
+  - [ ] 3.2 Fix `services/line_bot.py` — Remove hardcoded credentials and fix elder ID
+    - Remove hardcoded `LINE_CHANNEL_SECRET` and `LINE_CHANNEL_ACCESS_TOKEN` strings
+    - Replace with `config.LINE_CHANNEL_SECRET` and `config.LINE_CHANNEL_ACCESS_TOKEN`
+    - Replace `TARGET_ELDER_ID = "elder_178546685908e66b"` with `config.LINE_TARGET_ELDER_ID`
+    - Initialize `LineBotApi(config.LINE_CHANNEL_ACCESS_TOKEN)` and `WebhookHandler(config.LINE_CHANNEL_SECRET)`
+    - _Bug_Condition: Hardcoded credentials expired/revoked AND hardcoded elder ID mismatches data directory_
+    - _Expected_Behavior: Credentials from config.py (.env), elder ID from config.LINE_TARGET_ELDER_ID_
+    - _Preservation: Webhook receive flow (/callback) continues to work, reply functionality unchanged_
+    - _Requirements: 1.1, 1.2, 2.1, 2.2, 3.1, 3.4_
+
+  - [ ] 3.3 Fix `services/weather_cron.py` — Unified push function with logging
+    - Remove hardcoded fallback token in `_send_line_push()`, use only `config.LINE_CHANNEL_ACCESS_TOKEN` and `config.LINE_TARGET_USER_ID`
+    - Add structured error logging to `logs/line_bot.log` (timestamp, HTTP status, error detail)
+    - If token or user ID is empty, log error and return False immediately
+    - Remove `if __name__ == "__main__"` while-loop scheduler (eliminate dual scheduler conflict)
+    - Keep `scheduled_line_push()` callable by `app.py` without its own scheduling logic
+    - Keep `fetch_and_generate_prompt()` and weather functions unchanged
+    - _Bug_Condition: Fallback token expired AND no persistent logging AND dual scheduler conflict_
+    - _Expected_Behavior: Single credential source, structured logging on failure, no standalone scheduler_
+    - _Preservation: Weather data fetch and Environmental_Prompts.txt generation unchanged_
+    - _Requirements: 1.2, 1.3, 1.4, 2.2, 2.3, 2.4, 3.3_
+
+  - [ ] 3.4 Fix `app.py` — Add `is_sent` check, reminder push loop, unified push
+    - Add `is_sent` check in `_execute_daily_push()` before sending (prevent duplicate push)
+    - Replace direct `line_bot_api.push_message()` calls with `_send_line_push()` for consistent error handling
+    - Add new asyncio task `_reminder_push_loop()` (every 60s):
+      - Scan all elders' `reminders.json` for items with `status: "pending"` and `notified: False`
+      - If reminder time has been reached, push formatted notification via `_send_line_push()`
+      - Set `notified: True` after successful push
+    - Register `_reminder_push_loop` in FastAPI lifespan alongside `_daily_line_push_scheduler`
+    - _Bug_Condition: No is_sent check AND no reminder push mechanism_
+    - _Expected_Behavior: Daily push checks is_sent flag, reminders auto-pushed when time reached_
+    - _Preservation: Existing lifespan tasks, API routes, and chat endpoints unchanged_
+    - _Requirements: 1.3, 1.5, 2.3, 2.5_
+
+  - [ ] 3.5 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - LINE Push Delivers Successfully
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior (requirements 2.1–2.5)
+    - When this test passes, it confirms:
+      - Push with valid credentials succeeds
+      - Push with invalid credentials fails with structured log
+      - Daily push respects `is_sent` flag
+      - Elder ID resolves to actual data directory
+      - Pending reminders get pushed
+    - Run bug condition exploration test from step 1
+    - **EXPECTED OUTCOME**: Test PASSES (confirms all 5 bugs are fixed)
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+
+  - [ ] 3.6 Verify preservation tests still pass
+    - **Property 2: Preservation** - Non-Push Operations Unchanged
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm webhook receive, chat flow, weather updates, dashboard API, and reminder creation are unchanged
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [ ] 4. Checkpoint - Ensure all tests pass
+  - Run full test suite (exploration + preservation + any existing tests)
+  - Verify no regressions in non-push functionality
+  - Verify all 5 bug conditions are resolved
+  - Ensure `logs/line_bot.log` captures errors correctly
+  - Ensure all tests pass, ask the user if questions arise

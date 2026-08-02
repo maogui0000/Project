@@ -363,79 +363,77 @@ def _send_line_push(text: str) -> bool:
     """
     透過 LINE Bot API 推播訊息給目標使用者。
     直接使用 LINE Messaging API HTTP 呼叫，不依賴 Flask 的 line_bot.py。
+    失敗時寫入結構化日誌到 logs/line_bot.log。
     """
-    # 從 config 或硬編碼取得 LINE 設定
+    import logging
+
+    # 設定 file logger（每次呼叫確保 handler 存在）
+    _log_dir = os.path.join(config.BASE_DIR, "logs")
+    os.makedirs(_log_dir, exist_ok=True)
+    _log_path = os.path.join(_log_dir, "line_bot.log")
+
+    logger = logging.getLogger("line_push")
+    if not logger.handlers:
+        logger.setLevel(logging.DEBUG)
+        fh = logging.FileHandler(_log_path, encoding="utf-8")
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+        logger.addHandler(fh)
+
+    # 僅從 config 取得 LINE 設定（不使用硬編碼 fallback）
     access_token = config.LINE_CHANNEL_ACCESS_TOKEN
     target_user = config.LINE_TARGET_USER_ID
-    
-    # 若 config 未設定，嘗試從 line_bot.py 的硬編碼讀取
+
     if not access_token:
-        access_token = "l+QP6SuTqqETfAdeY3bJZSSU1ZmF6eBoxeOnWd/mlQpx7E7ihH7mIMR/hYmdSDimr3OWejX0c8kE0MY5LitY4WAHwIyn8fEtFfCT+57kFUayX6ovFZe34BAeMAN6ZcT+53FyVfF1aeb/GhGqihypoQdB04t89/1O/w1cDnyilFU="
-    if not target_user:
-        target_user = "U8ea3d1facf0625457e60e3e831b2a13c"
-    
-    if not access_token or not target_user:
-        print("[LINE 推播] ⚠️ LINE 設定不完整（無 access_token 或 target_user）")
+        print("[LINE 推播] ⚠️ LINE_CHANNEL_ACCESS_TOKEN 未設定，無法推播")
+        logger.error("LINE_CHANNEL_ACCESS_TOKEN 未設定（空值），無法推播")
         return False
-    
+
+    if not target_user:
+        print("[LINE 推播] ⚠️ LINE_TARGET_USER_ID 未設定，無法推播")
+        logger.error("LINE_TARGET_USER_ID 未設定（空值），無法推播")
+        return False
+
     try:
         import json as _json
         from urllib.request import Request, urlopen
         from urllib.error import URLError, HTTPError
-        
+
         url = "https://api.line.me/v2/bot/message/push"
         payload = _json.dumps({
             "to": target_user,
             "messages": [{"type": "text", "text": text}]
         }, ensure_ascii=False).encode('utf-8')
-        
+
         req = Request(url, data=payload, method='POST')
         req.add_header('Content-Type', 'application/json; charset=UTF-8')
         req.add_header('Authorization', 'Bearer ' + access_token)
-        
+
         response = urlopen(req, timeout=10)
-        
+
         if response.status == 200:
+            logger.info(f"推播成功 (HTTP 200)：{text[:50]}...")
             return True
         else:
             print(f"[LINE 推播] API 回應異常：{response.status}")
+            logger.warning(f"API 回應異常：HTTP {response.status}，訊息：{text[:50]}...")
             return False
     except HTTPError as e:
-        print(f"[LINE 推播] HTTP 錯誤：{e.code} {e.read().decode('utf-8','ignore')[:200]}")
+        error_body = e.read().decode('utf-8', 'ignore')[:200]
+        print(f"[LINE 推播] HTTP 錯誤：{e.code} {error_body}")
+        logger.error(f"HTTP 錯誤：{e.code}，回應：{error_body}，訊息：{text[:50]}...")
+        return False
+    except URLError as e:
+        print(f"[LINE 推播] 網路錯誤：{e.reason}")
+        logger.error(f"網路錯誤：{e.reason}，訊息：{text[:50]}...")
         return False
     except Exception as e:
         print(f"[LINE 推播] 發送失敗: {e}")
+        logger.error(f"發送失敗：{e}，訊息：{text[:50]}...")
         return False
 
 if __name__ == "__main__":
-    print("=== 天氣與日落環境監控服務 + LINE 定時推播已開啟 ===")
+    print("=== 天氣與日落環境監控服務已開啟（僅天氣更新）===")
     print(f"    天氣更新：每 6 小時")
-    print(f"    LINE 推播：每天 19:00（含 5 分鐘緩衝機制）")
-    
-    _last_line_push_date = None  # 記錄今天是否已推播過
-    
-    while True:
-        fetch_and_generate_prompt()
-        
-        # ── LINE 定時推播檢查（每分鐘輪詢）──
-        now = datetime.now()
-        today_str = now.strftime("%Y-%m-%d")
-        
-        # 每天 19:00 ~ 19:10 區間內觸發推播（一天只推一次）
-        if now.hour == 19 and now.minute <= 10 and _last_line_push_date != today_str:
-            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] 📢 LINE 推播觸發時間到！")
-            push_success = scheduled_line_push()
-            if push_success:
-                _last_line_push_date = today_str
-        
-        print("進入等待狀態，6 小時後將自動重新讀取... (欲關閉請直接關閉視窗，或按 Ctrl+C)")
-        
-        # 如果在 18:50~19:10 區間，改為每 60 秒檢查一次（確保不會錯過推播時間）
-        if now.hour == 18 and now.minute >= 50:
-            print("  [即將進入推播時段，60 秒後再檢查]")
-            time.sleep(60)
-        elif now.hour == 19 and now.minute <= 10:
-            print("  [推播時段內，60 秒後再檢查]")
-            time.sleep(60)
-        else:
-            time.sleep(21600)
+    print(f"    LINE 推播排程由 app.py 負責，此處不重複排程")
+    fetch_and_generate_prompt()

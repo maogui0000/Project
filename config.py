@@ -94,6 +94,7 @@ LINE_BOT_PORT = int(os.getenv("LINE_BOT_PORT", "5000"))
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
 LINE_TARGET_USER_ID = os.getenv("LINE_TARGET_USER_ID", "")
+LINE_TARGET_ELDER_ID = os.getenv("LINE_TARGET_ELDER_ID", "elder_demo_user_001")
 
 # ═══════════════════════════════════════════════════════
 # 檔案路徑設定

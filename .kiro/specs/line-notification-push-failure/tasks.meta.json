@@ -1,0 +1,73 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Write bug condition exploration test": [
+      {
+        "executionId": "8235ec07-5352-4144-a8a9-1139f379ef4a",
+        "chatSessionId": "sess_739ab3cd-2176-4b9d-96fb-e8a3f62fccb7",
+        "timestamp": 1785639506809
+      },
+      {
+        "executionId": "8235ec07-5352-4144-a8a9-1139f379ef4a",
+        "chatSessionId": "sess_739ab3cd-2176-4b9d-96fb-e8a3f62fccb7",
+        "timestamp": 1785639515337
+      }
+    ],
+    "2. Write preservation property tests (BEFORE implementing fix)": [
+      {
+        "executionId": "8235ec07-5352-4144-a8a9-1139f379ef4a",
+        "chatSessionId": "sess_739ab3cd-2176-4b9d-96fb-e8a3f62fccb7",
+        "timestamp": 1785639506834
+      }
+    ],
+    "3.1 Add `LINE_TARGET_ELDER_ID` to `config.py`": [
+      {
+        "executionId": "8235ec07-5352-4144-a8a9-1139f379ef4a",
+        "chatSessionId": "sess_739ab3cd-2176-4b9d-96fb-e8a3f62fccb7",
+        "timestamp": 1785639506865
+      }
+    ],
+    "3.2 Fix `services/line_bot.py` — Remove hardcoded credentials and fix elder ID": [
+      {
+        "executionId": "8235ec07-5352-4144-a8a9-1139f379ef4a",
+        "chatSessionId": "sess_739ab3cd-2176-4b9d-96fb-e8a3f62fccb7",
+        "timestamp": 1785639506898
+      }
+    ],
+    "3.3 Fix `services/weather_cron.py` — Unified push function with logging": [
+      {
+        "executionId": "8235ec07-5352-4144-a8a9-1139f379ef4a",
+        "chatSessionId": "sess_739ab3cd-2176-4b9d-96fb-e8a3f62fccb7",
+        "timestamp": 1785639506920
+      }
+    ],
+    "3.4 Fix `app.py` — Add `is_sent` check, reminder push loop, unified push": [
+      {
+        "executionId": "8235ec07-5352-4144-a8a9-1139f379ef4a",
+        "chatSessionId": "sess_739ab3cd-2176-4b9d-96fb-e8a3f62fccb7",
+        "timestamp": 1785639506946
+      }
+    ],
+    "3.5 Verify bug condition exploration test now passes": [
+      {
+        "executionId": "8235ec07-5352-4144-a8a9-1139f379ef4a",
+        "chatSessionId": "sess_739ab3cd-2176-4b9d-96fb-e8a3f62fccb7",
+        "timestamp": 1785639506967
+      }
+    ],
+    "3.6 Verify preservation tests still pass": [
+      {
+        "executionId": "8235ec07-5352-4144-a8a9-1139f379ef4a",
+        "chatSessionId": "sess_739ab3cd-2176-4b9d-96fb-e8a3f62fccb7",
+        "timestamp": 1785639506990
+      }
+    ],
+    "4. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "8235ec07-5352-4144-a8a9-1139f379ef4a",
+        "chatSessionId": "sess_739ab3cd-2176-4b9d-96fb-e8a3f62fccb7",
+        "timestamp": 1785639507011
+      }
+    ]
+  }
+}

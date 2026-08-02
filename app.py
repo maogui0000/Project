@@ -98,8 +98,7 @@ async def _daily_line_push_scheduler():
 async def _execute_daily_push():
     """執行每日推播：遍歷所有長者，生成摘要並推播"""
     try:
-        from services.line_bot import line_bot_api, TARGET_USER_ID
-        from linebot.models import TextSendMessage
+        from services.weather_cron import _send_line_push
         
         data_dir = os.path.join(config.BASE_DIR, "data")
         if not os.path.exists(data_dir):
@@ -112,6 +111,11 @@ async def _execute_daily_push():
                 elder_dm = DataManager(elder_id=elder_dir)
                 dashboard = elder_dm.get_dashboard_logs()
                 profile = elder_dm.get_profile()
+                
+                # 檢查今日是否已推播過，避免重複推播
+                if dashboard.get("line_notification_status", {}).get("is_sent", False):
+                    print(f"⏭️ [定時推播] {elder_dir} 今日已推播過，跳過")
+                    continue
                 
                 elder_name = profile.get("personal_info", {}).get("nickname") or profile.get("personal_info", {}).get("name") or elder_dir
                 summary = dashboard.get("today_summary", {})
@@ -140,20 +144,57 @@ async def _execute_daily_push():
                 msg += f"🎭 情緒：{emotion}\n"
                 msg += f"💬 互動：{total_turns} 次"
                 
-                line_bot_api.push_message(TARGET_USER_ID, TextSendMessage(text=msg))
+                success = _send_line_push(msg)
                 
-                # 更新推播狀態
-                elder_dm.update_today_summary("", {})
-                logs = elder_dm.get_dashboard_logs()
-                logs["line_notification_status"]["is_sent"] = True
-                logs["line_notification_status"]["trigger_time"] = config.now_tw().strftime("%H:%M:%S")
-                elder_dm._save(elder_dm.dashboard_path, logs)
-                
-                print(f"✅ [定時推播] 已推送 {elder_name} 的每日摘要")
+                if success:
+                    # 更新推播狀態
+                    logs = elder_dm.get_dashboard_logs()
+                    logs["line_notification_status"]["is_sent"] = True
+                    logs["line_notification_status"]["trigger_time"] = config.now_tw().strftime("%H:%M:%S")
+                    elder_dm._save(elder_dm.dashboard_path, logs)
+                    print(f"✅ [定時推播] 已推送 {elder_name} 的每日摘要")
+                else:
+                    print(f"❌ [定時推播] {elder_name} 推播失敗")
             except Exception as e:
                 print(f"⚠️ [定時推播] {elder_dir} 推播失敗：{e}")
     except Exception as e:
         print(f"🚨 [定時推播] 整體失敗：{e}")
+
+
+async def _reminder_push_loop():
+    """每 60 秒檢查待推播提醒，自動推送到 LINE"""
+    while True:
+        try:
+            await asyncio.sleep(60)
+            data_dir = os.path.join(config.BASE_DIR, "data")
+            if not os.path.exists(data_dir):
+                continue
+            for elder_dir in os.listdir(data_dir):
+                if not elder_dir.startswith("elder_"):
+                    continue
+                try:
+                    elder_dm = DataManager(elder_id=elder_dir)
+                    reminders_data = elder_dm._load(elder_dm.reminders_path)
+                    profile = elder_dm.get_profile()
+                    elder_name = profile.get("personal_info", {}).get("nickname") or profile.get("personal_info", {}).get("name") or elder_dir
+                    
+                    for reminder in reminders_data.get("reminders", []):
+                        if reminder.get("status") == "pending" and not reminder.get("notified", False):
+                            from services.weather_cron import _send_line_push
+                            msg = f"⏰ 【{elder_name} 提醒】\n{reminder['content']}"
+                            success = _send_line_push(msg)
+                            if success:
+                                reminder["notified"] = True
+                                reminder["status"] = "notified"
+                                elder_dm._save(elder_dm.reminders_path, reminders_data)
+                                print(f"📢 [提醒推播] ✅ 已推播：{reminder['content'][:30]}")
+                except Exception as e:
+                    print(f"⚠️ [提醒推播] {elder_dir} 處理失敗: {e}")
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"⚠️ [提醒推播] 迴圈錯誤: {e}")
+            await asyncio.sleep(60)
 
 
 @asynccontextmanager
@@ -180,9 +221,12 @@ async def lifespan(app: FastAPI):
     # 啟動每日 19:00 定時推播排程
     _daily_push_task = asyncio.create_task(_daily_line_push_scheduler())
     print("[啟動] 每日 19:00 LINE 定時推播排程已啟動")
+    _reminder_push_task = asyncio.create_task(_reminder_push_loop())
+    print("[啟動] 提醒推播迴圈已啟動（每 60 秒檢查）")
     
     yield
     _daily_push_task.cancel()
+    _reminder_push_task.cancel()
     print("[app] 後端 API 門戶已關閉")
 
 app = FastAPI(
@@ -677,8 +721,7 @@ def _get_importance_override(user_text: str) -> str:
 def _notify_caregiver_emergency(user_text: str, priority: str, keyword: str, elder_id: str):
     """求助偵測觸發 → 推播緊急通知給照護者"""
     try:
-        from services.line_bot import line_bot_api, TARGET_USER_ID
-        from linebot.models import TextSendMessage
+        from services.weather_cron import _send_line_push
         from core.data_manager import DataManager
 
         dm = DataManager(elder_id=elder_id)
@@ -696,8 +739,11 @@ def _notify_caregiver_emergency(user_text: str, priority: str, keyword: str, eld
             f"建議：{'請立即聯繫長者確認狀況' if priority == 'high' else '建議稍後關心長者狀況'}"
         )
 
-        line_bot_api.push_message(TARGET_USER_ID, TextSendMessage(text=msg))
-        print(f"{emoji} [求助偵測] 已推播{level}通知給照護者：{keyword}")
+        success = _send_line_push(msg)
+        if success:
+            print(f"{emoji} [求助偵測] 已推播{level}通知給照護者：{keyword}")
+        else:
+            print(f"⚠️ [求助偵測] {level}通知推播失敗：{keyword}")
 
         # 記錄到 timeline
         dm.add_timeline_event(
@@ -1830,3 +1876,11 @@ def add_reminder_api(elder_id: str, req: AddReminderRequest):
         return {"success": True, "message": f"提醒已新增：{req.content}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ═══════════════════════════════════════════════════════
+# 啟動伺服器
+# ═══════════════════════════════════════════════════════
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host=config.API_HOST, port=config.API_PORT)

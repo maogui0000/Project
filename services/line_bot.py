@@ -14,18 +14,20 @@ from linebot.models import (
     MessageEvent, TextMessage, AudioMessage, TextSendMessage
 )
 
+import config
+
 app = Flask(__name__)
 
-# LINE Bot 憑證設定
-LINE_CHANNEL_SECRET = '31abac3ba0956fe48e14d63bc0077a21'
-LINE_CHANNEL_ACCESS_TOKEN = 'l+QP6SuTqqETfAdeY3bJZSSU1ZmF6eBoxeOnWd/mlQpx7E7ihH7mIMR/hYmdSDimr3OWejX0c8kE0MY5LitY4WAHwIyn8fEtFfCT+57kFUayX6ovFZe34BAeMAN6ZcT+53FyVfF1aeb/GhGqihypoQdB04t89/1O/w1cDnyilFU='
+# LINE Bot 憑證設定（統一從 config.py 讀取，config.py 從 .env 取得）
+LINE_CHANNEL_SECRET = config.LINE_CHANNEL_SECRET
+LINE_CHANNEL_ACCESS_TOKEN = config.LINE_CHANNEL_ACCESS_TOKEN
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
-# 照護者 LINE User ID + 對應的長者 ID
-TARGET_USER_ID = "U8ea3d1facf0625457e60e3e831b2a13c"
-TARGET_ELDER_ID = "elder_178546685908e66b"
+# 照護者 LINE User ID + 對應的長者 ID（統一從 config 讀取）
+TARGET_USER_ID = config.LINE_TARGET_USER_ID or "U8ea3d1facf0625457e60e3e831b2a13c"
+TARGET_ELDER_ID = config.LINE_TARGET_ELDER_ID
 
 
 # ═══════════════════════════════════════════════════════
