@@ -359,20 +359,34 @@ def scheduled_line_push(max_wait_seconds: int = 300) -> bool:
     return True
 
 
-def _send_line_push(text: str) -> bool:
+def _send_line_push(text: str, elder_id: str = None) -> bool:
     """
     透過 LINE Bot API 推播訊息給目標使用者。
-    使用 requests 庫正確處理 UTF-8 編碼。
+    優先從 elder_profile.line_settings.user_id 讀取推播對象。
     """
-    # 從 config 取得 LINE 設定
     access_token = config.LINE_CHANNEL_ACCESS_TOKEN
-    target_user = config.LINE_TARGET_USER_ID
+    target_user = None
 
-    # Fallback（僅在 .env 未設定時使用）
-    if not access_token:
-        access_token = "l+QP6SuTqqETfAdeY3bJZSSU1ZmF6eBoxeOnWd/mlQpx7E7ihH7mIMR/hYmdSDimr3OWejX0c8kE0MY5LitY4WAHwIyn8fEtFfCT+57kFUayX6ovFZe34BAeMAN6ZcT+53FyVfF1aeb/GhGqihypoQdB04t89/1O/w1cDnyilFU="
+    # 優先從長者 profile 讀取照護者的 LINE User ID
+    if elder_id:
+        try:
+            from core.data_manager import DataManager
+            dm = DataManager(elder_id=elder_id)
+            profile = dm.get_profile()
+            line_settings = profile.get("line_settings", {})
+            if line_settings.get("enabled", False) and line_settings.get("user_id"):
+                target_user = line_settings["user_id"]
+        except Exception:
+            pass
+
+    # Fallback：從 config / .env 讀取
+    if not target_user:
+        target_user = config.LINE_TARGET_USER_ID
     if not target_user:
         target_user = "U8ea3d1facf0625457e60e3e831b2a13c"
+
+    if not access_token:
+        access_token = "l+QP6SuTqqETfAdeY3bJZSSU1ZmF6eBoxeOnWd/mlQpx7E7ihH7mIMR/hYmdSDimr3OWejX0c8kE0MY5LitY4WAHwIyn8fEtFfCT+57kFUayX6ovFZe34BAeMAN6ZcT+53FyVfF1aeb/GhGqihypoQdB04t89/1O/w1cDnyilFU="
 
     if not access_token or not target_user:
         print("[LINE push] config incomplete")

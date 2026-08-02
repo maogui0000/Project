@@ -144,7 +144,7 @@ async def _execute_daily_push():
                 msg += f"🎭 情緒：{emotion}\n"
                 msg += f"💬 互動：{total_turns} 次"
                 
-                success = _send_line_push(msg)
+                success = _send_line_push(msg, elder_id=elder_dir)
                 
                 if success:
                     # 更新推播狀態
@@ -182,7 +182,7 @@ async def _reminder_push_loop():
                         if reminder.get("status") == "pending" and not reminder.get("notified", False):
                             from services.weather_cron import _send_line_push
                             msg = f"⏰ 【{elder_name} 提醒】\n{reminder['content']}"
-                            success = _send_line_push(msg)
+                            success = _send_line_push(msg, elder_id=elder_dir)
                             if success:
                                 reminder["notified"] = True
                                 reminder["status"] = "notified"
@@ -611,7 +611,7 @@ def _send_line_session_summary(elder_id: str):
         message += f"💊 用藥：{medication or '未提及'}\n"
         message += f"🎭 情緒：{emotion_display or '未檢測'}"
         
-        _send_line_push(message)
+        _send_line_push(message, elder_id=elder_id)
         print(f"✅ [LINE 即時推播] 已推送 {elder_name} 的互動摘要")
     except Exception as e:
         print(f"⚠️ [LINE 即時推播] 組裝或發送失敗: {e}")
@@ -739,7 +739,7 @@ def _notify_caregiver_emergency(user_text: str, priority: str, keyword: str, eld
             f"建議：{'請立即聯繫長者確認狀況' if priority == 'high' else '建議稍後關心長者狀況'}"
         )
 
-        success = _send_line_push(msg)
+        success = _send_line_push(msg, elder_id=elder_dir)
         if success:
             print(f"{emoji} [求助偵測] 已推播{level}通知給照護者：{keyword}")
         else:
@@ -984,7 +984,7 @@ async def handle_chat_stream(req: ChatStreamRequest):
                     _dm2 = DataManager(elder_id=eid)
                     _profile2 = _dm2.get_profile()
                     _name2 = _profile2.get("personal_info", {}).get("nickname") or eid
-                    _send_line_push(f"⏰ 【{_name2} 提醒】\n長者說：「{u_text[:80]}」")
+                    _send_line_push(f"⏰ 【{_name2} 提醒】\n長者說：「{u_text[:80]}」", elder_id=eid)
                     print(f"📢 [提醒 LINE] 已推播：{u_text[:30]}")
                 except Exception as _e2:
                     print(f"⚠️ [提醒 LINE] 推播失敗: {_e2}")

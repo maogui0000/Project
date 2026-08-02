@@ -325,7 +325,7 @@ class MemoryController:
                 profile = self.dm.get_profile()
                 elder_name = profile.get("personal_info", {}).get("nickname") or profile.get("personal_info", {}).get("name") or self.dm.elder_id
                 line_msg = f"⏰ 【{elder_name} 提醒轉達】\n{reminder_text}"
-                _send_line_push(line_msg)
+                _send_line_push(line_msg, elder_id=self.dm.elder_id)
                 print(f"📢 [提醒] 已透過 LINE 通知家人：{reminder_text}")
             except Exception as e:
                 print(f"⚠️ [提醒] LINE 通知失敗: {e}")
