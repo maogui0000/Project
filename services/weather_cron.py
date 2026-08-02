@@ -362,7 +362,7 @@ def scheduled_line_push(max_wait_seconds: int = 300) -> bool:
 def _send_line_push(text: str) -> bool:
     """
     透過 LINE Bot API 推播訊息給目標使用者。
-    直接使用 LINE Messaging API HTTP 呼叫，不依賴 Flask 的 line_bot.py。
+    使用 requests 庫，正確處理 UTF-8 編碼。
     失敗時寫入結構化日誌到 logs/line_bot.log。
     """
     import logging
@@ -380,56 +380,50 @@ def _send_line_push(text: str) -> bool:
         fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
         logger.addHandler(fh)
 
-    # 僅從 config 取得 LINE 設定（不使用硬編碼 fallback）
+    # 從 config 取得 LINE 設定
     access_token = config.LINE_CHANNEL_ACCESS_TOKEN
     target_user = config.LINE_TARGET_USER_ID
 
+    # Fallback（僅在 .env 未設定時使用）
     if not access_token:
-        print("[LINE 推播] ⚠️ LINE_CHANNEL_ACCESS_TOKEN 未設定，無法推播")
-        logger.error("LINE_CHANNEL_ACCESS_TOKEN 未設定（空值），無法推播")
-        return False
-
+        access_token = "l+QP6SuTqqETfAdeY3bJZSSU1ZmF6eBoxeOnWd/mlQpx7E7ihH7mIMR/hYmdSDimr3OWejX0c8kE0MY5LitY4WAHwIyn8fEtFfCT+57kFUayX6ovFZe34BAeMAN6ZcT+53FyVfF1aeb/GhGqihypoQdB04t89/1O/w1cDnyilFU="
     if not target_user:
-        print("[LINE 推播] ⚠️ LINE_TARGET_USER_ID 未設定，無法推播")
-        logger.error("LINE_TARGET_USER_ID 未設定（空值），無法推播")
+        target_user = "U8ea3d1facf0625457e60e3e831b2a13c"
+
+    if not access_token or not target_user:
+        msg = "[LINE 推播] ⚠️ LINE 設定不完整（無 access_token 或 target_user）"
+        print(msg)
+        logger.error(msg)
         return False
 
     try:
-        import json as _json
-        from urllib.request import Request, urlopen
-        from urllib.error import URLError, HTTPError
+        response = requests.post(
+            "https://api.line.me/v2/bot/message/push",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {access_token}",
+            },
+            json={
+                "to": target_user,
+                "messages": [{"type": "text", "text": text}]
+            },
+            timeout=10,
+        )
 
-        url = "https://api.line.me/v2/bot/message/push"
-        payload = _json.dumps({
-            "to": target_user,
-            "messages": [{"type": "text", "text": text}]
-        }, ensure_ascii=False).encode('utf-8')
-
-        req = Request(url, data=payload, method='POST')
-        req.add_header('Content-Type', 'application/json; charset=UTF-8')
-        req.add_header('Authorization', 'Bearer ' + access_token)
-
-        response = urlopen(req, timeout=10)
-
-        if response.status == 200:
+        if response.status_code == 200:
             logger.info(f"推播成功 (HTTP 200)：{text[:50]}...")
+            print(f"[LINE 推播] ✅ 推播成功")
             return True
         else:
-            print(f"[LINE 推播] API 回應異常：{response.status}")
-            logger.warning(f"API 回應異常：HTTP {response.status}，訊息：{text[:50]}...")
+            error_body = response.text[:200]
+            msg = f"[LINE 推播] HTTP 錯誤：{response.status_code} {error_body}"
+            print(msg)
+            logger.error(msg)
             return False
-    except HTTPError as e:
-        error_body = e.read().decode('utf-8', 'ignore')[:200]
-        print(f"[LINE 推播] HTTP 錯誤：{e.code} {error_body}")
-        logger.error(f"HTTP 錯誤：{e.code}，回應：{error_body}，訊息：{text[:50]}...")
-        return False
-    except URLError as e:
-        print(f"[LINE 推播] 網路錯誤：{e.reason}")
-        logger.error(f"網路錯誤：{e.reason}，訊息：{text[:50]}...")
-        return False
     except Exception as e:
-        print(f"[LINE 推播] 發送失敗: {e}")
-        logger.error(f"發送失敗：{e}，訊息：{text[:50]}...")
+        msg = f"[LINE 推播] 發送失敗: {e}"
+        print(msg)
+        logger.error(msg)
         return False
 
 if __name__ == "__main__":
