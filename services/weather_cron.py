@@ -379,23 +379,30 @@ def _send_line_push(text: str) -> bool:
         return False
     
     try:
+        import json as _json
+        from urllib.request import Request, urlopen
+        from urllib.error import URLError, HTTPError
+        
         url = "https://api.line.me/v2/bot/message/push"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {access_token}"
-        }
-        payload = {
+        payload = _json.dumps({
             "to": target_user,
             "messages": [{"type": "text", "text": text}]
-        }
+        }, ensure_ascii=False).encode('utf-8')
         
-        response = requests.post(url, headers=headers, data=json.dumps(payload, ensure_ascii=False).encode('utf-8'), timeout=10)
+        req = Request(url, data=payload, method='POST')
+        req.add_header('Content-Type', 'application/json; charset=UTF-8')
+        req.add_header('Authorization', 'Bearer ' + access_token)
         
-        if response.status_code == 200:
+        response = urlopen(req, timeout=10)
+        
+        if response.status == 200:
             return True
         else:
-            print(f"[LINE 推播] API 回應異常：{response.status_code} {response.text[:200]}")
+            print(f"[LINE 推播] API 回應異常：{response.status}")
             return False
+    except HTTPError as e:
+        print(f"[LINE 推播] HTTP 錯誤：{e.code} {e.read().decode('utf-8','ignore')[:200]}")
+        return False
     except Exception as e:
         print(f"[LINE 推播] 發送失敗: {e}")
         return False
