@@ -308,36 +308,56 @@ function renderSummary() {
 function renderEmotion() {
   if (!elderData) return;
   const history = elderData.emotion_history || [];
-  const latest = history.length > 0 ? history[history.length - 1] : null;
-  const emotionIcon = {'開心':'😊','難過':'😢','生氣':'😠','恐懼':'😰','中立':'😐','未檢測':'🔍'}[latest?.emotion] || '🔍';
+  const latest = history.length > 0 ? history[0] : null;
+  const metrics = elderData.today_summary?.metrics || {};
+  const currentEmotion = metrics.emotion || latest?.emotion || '未檢測';
+  const emotionReason = metrics.emotion_reason || latest?.reason || '';
+  const emotionIcon = {'開心':'😊','難過':'😢','生氣':'😠','恐懼':'😰','中立':'😐','未檢測':'🔍'}[currentEmotion] || '🔍';
   const emotionMap = {'開心':5,'吃驚':4,'中立':3,'難過':2,'生氣':1,'恐懼':1,'未檢測':3};
 
-  const recent20 = history.slice(-20);
+  // 生成情緒總結文字
+  let summaryText = '';
+  if (currentEmotion && currentEmotion !== '未檢測') {
+    summaryText = emotionReason ? `今天情緒：${currentEmotion}（${emotionReason}）` : `今天整體情緒：${currentEmotion}`;
+  } else {
+    summaryText = '今天還沒有偵測到明確的情緒變化';
+  }
+
+  // 統計今日各情緒出現次數
+  const emotionCounts = {};
+  history.forEach(e => { if (e.emotion && e.emotion !== '未檢測') emotionCounts[e.emotion] = (emotionCounts[e.emotion]||0) + 1; });
+  const countText = Object.entries(emotionCounts).map(([k,v]) => `${k}${v}次`).join('、');
+
+  const recent20 = history.slice(0, 20);
 
   document.getElementById('pageContainer').innerHTML = `
     <h2 class="text-lg font-bold mb-4">😊 情緒趨勢</h2>
-    <div class="card p-4 mb-4 flex items-center gap-4">
-      <div class="text-4xl">${emotionIcon}</div>
-      <div><div class="text-lg font-bold text-white">${latest?.emotion || '未檢測'}</div><div class="text-xs text-slate-400">${latest?.reason || ''}</div></div>
+    <div class="card p-4 mb-4">
+      <div class="flex items-center gap-4 mb-2">
+        <div class="text-4xl">${emotionIcon}</div>
+        <div><div class="text-lg font-bold text-white">${currentEmotion}</div><div class="text-xs text-slate-400">${summaryText}</div></div>
+      </div>
+      ${countText ? `<div class="text-xs text-slate-500 mt-2">今日情緒統計：${countText}</div>` : ''}
     </div>
     <div class="card p-4 mb-4"><canvas id="emotionChart" height="200"></canvas></div>
     <div class="card p-4"><h3 class="text-sm font-bold text-slate-400 mb-3">最近記錄</h3>
       <div class="space-y-2 max-h-64 overflow-y-auto">
-        ${recent20.reverse().map(e => `<div class="flex justify-between text-xs py-1 border-b border-slate-700/50"><span class="text-slate-400">${(e.time||'').slice(11,16)}</span><span class="text-white">${e.emotion}</span><span class="text-slate-500">${(e.reason||'').slice(0,20)}</span></div>`).join('')}
+        ${recent20.map(e => `<div class="flex justify-between text-xs py-1 border-b border-slate-700/50"><span class="text-slate-400">${(e.time||'').slice(11,16)}</span><span class="text-white">${e.emotion}</span><span class="text-slate-500">${(e.reason||'').slice(0,20)}</span></div>`).join('')}
       </div>
     </div>
   `;
 
   // 繪製圖表
   if (recent20.length > 1) {
+    const chartData = [...recent20].reverse(); // 圖表要從舊到新
     const ctx = document.getElementById('emotionChart').getContext('2d');
     new Chart(ctx, {
       type: 'line',
       data: {
-        labels: recent20.map(e => (e.time||'').slice(11,16)),
+        labels: chartData.map(e => (e.time||'').slice(11,16)),
         datasets: [{
           label: '情緒',
-          data: recent20.map(e => emotionMap[e.emotion] || 3),
+          data: chartData.map(e => emotionMap[e.emotion] || 3),
           borderColor: '#06b6d4',
           backgroundColor: 'rgba(6,182,212,0.1)',
           fill: true, tension: 0.3, pointRadius: 5
