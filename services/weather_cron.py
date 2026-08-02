@@ -362,24 +362,8 @@ def scheduled_line_push(max_wait_seconds: int = 300) -> bool:
 def _send_line_push(text: str) -> bool:
     """
     透過 LINE Bot API 推播訊息給目標使用者。
-    使用 requests 庫，正確處理 UTF-8 編碼。
-    失敗時寫入結構化日誌到 logs/line_bot.log。
+    使用 requests 庫正確處理 UTF-8 編碼。
     """
-    import logging
-
-    # 設定 file logger（每次呼叫確保 handler 存在）
-    _log_dir = os.path.join(config.BASE_DIR, "logs")
-    os.makedirs(_log_dir, exist_ok=True)
-    _log_path = os.path.join(_log_dir, "line_bot.log")
-
-    logger = logging.getLogger("line_push")
-    if not logger.handlers:
-        logger.setLevel(logging.DEBUG)
-        fh = logging.FileHandler(_log_path, encoding="utf-8")
-        fh.setLevel(logging.DEBUG)
-        fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
-        logger.addHandler(fh)
-
     # 從 config 取得 LINE 設定
     access_token = config.LINE_CHANNEL_ACCESS_TOKEN
     target_user = config.LINE_TARGET_USER_ID
@@ -391,39 +375,41 @@ def _send_line_push(text: str) -> bool:
         target_user = "U8ea3d1facf0625457e60e3e831b2a13c"
 
     if not access_token or not target_user:
-        msg = "[LINE 推播] ⚠️ LINE 設定不完整（無 access_token 或 target_user）"
-        print(msg)
-        logger.error(msg)
+        print("[LINE push] config incomplete")
         return False
 
     try:
-        response = requests.post(
-            "https://api.line.me/v2/bot/message/push",
+        import json as _json
+        import http.client
+        
+        payload_bytes = _json.dumps({
+            "to": target_user,
+            "messages": [{"type": "text", "text": text}]
+        }, ensure_ascii=False).encode('utf-8')
+        
+        conn = http.client.HTTPSConnection("api.line.me", timeout=10)
+        conn.request(
+            "POST",
+            "/v2/bot/message/push",
+            body=payload_bytes,
             headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {access_token}",
-            },
-            json={
-                "to": target_user,
-                "messages": [{"type": "text", "text": text}]
-            },
-            timeout=10,
+                "Content-Type": "application/json; charset=UTF-8",
+                "Authorization": "Bearer " + access_token,
+                "Content-Length": str(len(payload_bytes)),
+            }
         )
-
-        if response.status_code == 200:
-            logger.info(f"推播成功 (HTTP 200)：{text[:50]}...")
-            print(f"[LINE 推播] ✅ 推播成功")
+        resp = conn.getresponse()
+        resp_body = resp.read().decode('utf-8', 'ignore')
+        conn.close()
+        
+        if resp.status == 200:
+            print("[LINE push] OK")
             return True
         else:
-            error_body = response.text[:200]
-            msg = f"[LINE 推播] HTTP 錯誤：{response.status_code} {error_body}"
-            print(msg)
-            logger.error(msg)
+            print(f"[LINE push] HTTP {resp.status}: {resp_body[:100]}")
             return False
     except Exception as e:
-        msg = f"[LINE 推播] 發送失敗: {e}"
-        print(msg)
-        logger.error(msg)
+        print(f"[LINE push] error: {e}")
         return False
 
 if __name__ == "__main__":
