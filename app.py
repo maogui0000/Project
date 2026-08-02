@@ -1910,13 +1910,27 @@ def _handle_line_text(event):
             _line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠️ 無法取得動態：{e}"))
         return
 
-    # 其他文字 → 存為留言
+    # 其他文字 → 存為留言 + 自動綁定 User ID
     try:
         import glob
         for f in glob.glob(os.path.join(config.DATA_DIR, 'elder_*/elder_profile.json')):
             eid = os.path.basename(os.path.dirname(f))
             dm = DataManager(elder_id=eid)
             profile = dm.get_profile()
+            
+            # 自動綁定：如果 line_settings 還沒有正確的 User ID，自動存入
+            line_settings = profile.get("line_settings", {})
+            if not line_settings.get("user_id") or not line_settings["user_id"].startswith("U"):
+                profile["line_settings"] = {"enabled": True, "user_id": user_id}
+                profile["meta"]["last_updated"] = datetime.now().isoformat()
+                dm._save(dm.profile_path, profile)
+                _line_bot_api.reply_message(event.reply_token, TextSendMessage(
+                    text=f"✅ LINE 推播已自動綁定成功！\n之後長輩的動態會推播給您。\n\n如要傳留言給長輩，直接打字送出即可。"
+                ))
+                print(f"🔗 [LINE] 自動綁定 User ID: {user_id} → {eid}")
+                return
+
+            # 已綁定 → 存為留言
             ec = profile.get("emergency_contact", {})
             sender_name = ec.get("name", "家人") or "家人"
             dm.add_message(sender_name=sender_name, content_type="text", content_text=text)
@@ -1925,7 +1939,7 @@ def _handle_line_text(event):
             ))
             return
     except Exception as e:
-        _line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠️ 留言失敗：{e}"))
+        _line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠️ 處理失敗：{e}"))
 
 # 留言語音檔（照護者傳的語音留言）
 _audio_data_dir = os.path.join(config.DATA_DIR)
