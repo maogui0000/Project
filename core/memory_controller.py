@@ -22,6 +22,39 @@ from core.data_manager import DataManager
 # 匯入配置
 import config
 
+# 匯入安全規則
+import json as _json
+_SAFETY_RULES_CACHE = None
+
+def _get_safety_rules():
+    """載入安全規則 JSON"""
+    global _SAFETY_RULES_CACHE
+    if _SAFETY_RULES_CACHE is not None:
+        return _SAFETY_RULES_CACHE
+    rules_path = os.path.join(config.PROMPTS_DIR, "safety_rules.json")
+    try:
+        with open(rules_path, 'r', encoding='utf-8') as f:
+            _SAFETY_RULES_CACHE = _json.load(f)
+    except Exception:
+        _SAFETY_RULES_CACHE = {"memory_importance_overrides": {"permanent": [], "high": [], "medium": []}}
+    return _SAFETY_RULES_CACHE
+
+
+def _get_importance_for_text(user_text: str) -> str:
+    """根據安全規則判斷記憶最低重要性等級，回傳 permanent/high/medium/None"""
+    rules = _get_safety_rules()
+    overrides = rules.get("memory_importance_overrides", {})
+    for kw in overrides.get("permanent", []):
+        if kw in user_text:
+            return "permanent"
+    for kw in overrides.get("high", []):
+        if kw in user_text:
+            return "high"
+    for kw in overrides.get("medium", []):
+        if kw in user_text:
+            return "medium"
+    return None
+
 # 匯入 AI 對話函數
 try:
     from core.ai_chat import ask_ollama
@@ -81,6 +114,17 @@ class MemoryController:
 
         # 1. 寫入短期記憶
         self.dm.add_dialogue_turn(user_text, ai_text)
+
+        # 1b. 安全規則覆蓋：檢查是否需要強制升級重要性
+        safety_override = _get_importance_for_text(user_text)
+        if safety_override:
+            print(f"🛡️ [安全規則] 偵測到關鍵詞，強制記憶重要性 ≥ {safety_override}")
+            # 直接寫入長期記憶（確保不會因 LLM 判斷不準而遺漏）
+            self.dm.add_long_term_record(
+                category="health" if safety_override == "permanent" else "other",
+                content=user_text[:100],
+                importance=safety_override,
+            )
 
         # 2. 用 AI 分析健康資訊
         analysis = self._analyze_health_info(user_text, current_time_str)

@@ -318,7 +318,13 @@ async function verifyPin() {
       document.getElementById('mainTitle').textContent = `${nickname}，今天好嗎？`;
       initWakeWordDetection();
     } else {
-      errorEl.textContent = data.detail || '慣稱或 PIN 碼錯誤';
+      if (res.status === 423) {
+        errorEl.textContent = '⚠️ PIN 碼錯誤次數過多，帳號已鎖定 15 分鐘，請稍後再試';
+        errorEl.style.color = '#f97316';
+      } else {
+        errorEl.textContent = data.detail || '慣稱或 PIN 碼錯誤';
+        errorEl.style.color = '';
+      }
       errorEl.classList.remove('hidden');
     }
   } catch (e) {
@@ -643,9 +649,12 @@ async function playMessageFlow(messages) {
   for (const msg of messages) {
     if (msg.content_type === 'text') {
       await ttsPrompt(`${msg.sender_name}說：${msg.content_text}`);
+    } else if (msg.content_type === 'audio' && msg.content_audio_path) {
+      await ttsPrompt(`${msg.sender_name}留了一段語音訊息給你。`);
+      // 播放原始語音檔
+      await playAudioFile(msg.content_audio_path);
     } else {
       await ttsPrompt(`${msg.sender_name}留了一段語音訊息給你。`);
-      // 語音留言：嘗試播放音檔（如果有路徑的話）
     }
     // 標記已讀
     try {
@@ -769,6 +778,15 @@ function isNegativeResponse(text) {
   return noWords.some(w => text.includes(w));
 }
 
+function playAudioFile(path) {
+  return new Promise((resolve) => {
+    const audio = new Audio(path);
+    audio.onended = resolve;
+    audio.onerror = () => { console.warn('[留言板] 語音檔播放失敗:', path); resolve(); };
+    audio.play().catch(() => resolve());
+  });
+}
+
 // ═══════════════════ 主動提醒排程 ═══════════════════
 
 let _reminderInterval = null;
@@ -871,7 +889,22 @@ function vadLoop() {
   analyser.getByteFrequencyData(buf);
   const vol = buf.reduce((a,b)=>a+b,0) / buf.length;
 
-  if (STATE === 'speaking') { rafId = requestAnimationFrame(vadLoop); return; }
+  if (STATE === 'speaking') {
+    // Barge-in：使用者在 AI 說話時開口 → 打斷 TTS
+    if (vol > THRESHOLD * 1.5) {
+      console.log('[Barge-in] 偵測到使用者說話，打斷 TTS');
+      // 停止 TTS 播放
+      audioQueue = [];
+      isPlayingQueue = false;
+      if (ttsAudio) { ttsAudio.pause(); ttsAudio.currentTime = 0; ttsAudio = null; }
+      if (window.speechSynthesis) speechSynthesis.cancel();
+      // 切回錄音狀態
+      setUI('listening');
+      startLiveSpeechRecognition();
+      resetIdleTimer();
+    }
+    rafId = requestAnimationFrame(vadLoop); return;
+  }
 
   if (vol > THRESHOLD) {
     if (STATE === 'listening') setUI('recording');

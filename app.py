@@ -60,6 +60,102 @@ from core.ai_chat import ask_ollama_stream_sentences
 # FastAPI 初始化
 # ═══════════════════════════════════════════════════════
 
+# ═══════════════════════════════════════════════════════
+# 每日 19:00 定時 LINE 推播排程
+# ═══════════════════════════════════════════════════════
+
+async def _daily_line_push_scheduler():
+    """每日 19:00（台灣時間）自動推播當日摘要給照護者"""
+    while True:
+        try:
+            now = config.now_tw()
+            # 計算到今天 19:00 的秒數
+            target_hour = 19
+            target_minute = 0
+            target = now.replace(hour=target_hour, minute=target_minute, second=0, microsecond=0)
+            if now >= target:
+                # 已過今天 19:00，等到明天
+                from datetime import timedelta
+                target += timedelta(days=1)
+            
+            wait_seconds = (target - now).total_seconds()
+            print(f"⏰ [定時推播] 下次推播時間：{target.strftime('%Y-%m-%d %H:%M')}（等待 {wait_seconds:.0f} 秒）")
+            await asyncio.sleep(wait_seconds)
+            
+            # 時間到，執行推播
+            print("📤 [定時推播] 19:00 到了，開始推播每日摘要...")
+            await _execute_daily_push()
+            
+            # 推播完等 60 秒避免重複觸發
+            await asyncio.sleep(60)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"⚠️ [定時推播] 排程錯誤：{e}")
+            await asyncio.sleep(300)  # 出錯等 5 分鐘再試
+
+
+async def _execute_daily_push():
+    """執行每日推播：遍歷所有長者，生成摘要並推播"""
+    try:
+        from services.line_bot import line_bot_api, TARGET_USER_ID
+        from linebot.models import TextSendMessage
+        
+        data_dir = os.path.join(config.BASE_DIR, "data")
+        if not os.path.exists(data_dir):
+            return
+        
+        for elder_dir in os.listdir(data_dir):
+            if not elder_dir.startswith("elder_"):
+                continue
+            try:
+                elder_dm = DataManager(elder_id=elder_dir)
+                dashboard = elder_dm.get_dashboard_logs()
+                profile = elder_dm.get_profile()
+                
+                elder_name = profile.get("personal_info", {}).get("nickname") or profile.get("personal_info", {}).get("name") or elder_dir
+                summary = dashboard.get("today_summary", {})
+                summary_text = summary.get("text", "")
+                metrics = summary.get("metrics", {})
+                stats = dashboard.get("interaction_stats", {})
+                
+                # 組裝推播訊息
+                diet = metrics.get("diet", "未提及")
+                sleep = metrics.get("sleep", "未提及")
+                medication = metrics.get("medication", "未提及")
+                emotion = metrics.get("emotion", "未檢測")
+                activity = metrics.get("activity", "未提及")
+                total_turns = stats.get("total_turns", 0)
+                
+                msg = f"📋 【{elder_name} 每日摘要】\n━━━━━━━━━━━\n"
+                if summary_text:
+                    msg += f"📝 {summary_text}\n\n"
+                elif total_turns == 0:
+                    msg += f"📝 今天還沒有與系統互動喔，建議關心一下長者。\n\n"
+                
+                msg += f"🍚 飲食：{diet}\n"
+                msg += f"🏃 活動：{activity}\n"
+                msg += f"😴 睡眠：{sleep}\n"
+                msg += f"💊 用藥：{medication}\n"
+                msg += f"🎭 情緒：{emotion}\n"
+                msg += f"💬 互動：{total_turns} 次"
+                
+                line_bot_api.push_message(TARGET_USER_ID, TextSendMessage(text=msg))
+                
+                # 更新推播狀態
+                elder_dm.update_today_summary("", {})
+                logs = elder_dm.get_dashboard_logs()
+                logs["line_notification_status"]["is_sent"] = True
+                logs["line_notification_status"]["trigger_time"] = config.now_tw().strftime("%H:%M:%S")
+                elder_dm._save(elder_dm.dashboard_path, logs)
+                
+                print(f"✅ [定時推播] 已推送 {elder_name} 的每日摘要")
+            except Exception as e:
+                print(f"⚠️ [定時推播] {elder_dir} 推播失敗：{e}")
+    except Exception as e:
+        print(f"🚨 [定時推播] 整體失敗：{e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("=" * 50)
@@ -81,7 +177,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"⚠️ ASR 預載失敗（首次請求時會再嘗試）: {e}")
     
+    # 啟動每日 19:00 定時推播排程
+    _daily_push_task = asyncio.create_task(_daily_line_push_scheduler())
+    print("[啟動] 每日 19:00 LINE 定時推播排程已啟動")
+    
     yield
+    _daily_push_task.cancel()
     print("[app] 後端 API 門戶已關閉")
 
 app = FastAPI(
@@ -1654,10 +1755,6 @@ def mark_reminder_notified(elder_id: str, content: str = ""):
         return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-# ═══════════════════════════════════════════════════════
-# 靜態檔案與頁面路由
 # ═══════════════════════════════════════════════════════
 
 # 串流音訊暫存檔路由（下載後自動刪除）
@@ -1679,4 +1776,25 @@ async def get_stream_audio(index: int):
 
 # 圖片資源
 app.mount("/images", StaticFiles(directory=config.IMAGES_DIR), name="images")
+
+# 留言語音檔（照護者傳的語音留言）
+_audio_data_dir = os.path.join(config.DATA_DIR)
+if os.path.exists(_audio_data_dir):
+    app.mount("/data", StaticFiles(directory=_audio_data_dir), name="data_files")
+
 app.mount("/", StaticFiles(directory=config.WEB_DIR, html=True), name="static")
+
+
+class AddReminderRequest(BaseModel):
+    content: str
+
+@app.post("/api/reminders/{elder_id}/add")
+def add_reminder_api(elder_id: str, req: AddReminderRequest):
+    """手動新增提醒事項"""
+    elder_id = _validate_elder_id(elder_id)
+    try:
+        elder_dm = DataManager(elder_id=elder_id)
+        elder_dm.add_reminder(content=req.content, requested_by="照護者")
+        return {"success": True, "message": f"提醒已新增：{req.content}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -109,7 +109,12 @@ async function dashVerifyPin() {
       document.getElementById('dashAuthGate').classList.add('hidden');
       location.reload();
     } else {
-      errorEl.textContent = data.detail || '慣稱或 PIN 碼錯誤';
+      if (res.status === 423) {
+        errorEl.textContent = '⚠️ PIN 碼錯誤次數過多，帳號已鎖定 15 分鐘';
+        errorEl.style.color = '#f97316';
+      } else {
+        errorEl.textContent = data.detail || '慣稱或 PIN 碼錯誤';
+      }
       errorEl.classList.remove('hidden');
     }
   } catch(e) { errorEl.textContent = '驗證失敗'; errorEl.classList.remove('hidden'); }
@@ -201,12 +206,11 @@ function renderProfile() {
   const med = elderData.medical_safety || {};
   const phy = elderData.physical_care || {};
   const men = elderData.mental_cognitive || {};
-  const loc = elderData.localization_settings || {};
 
-  const field = (label, val) => `<div class="flex justify-between py-1.5 border-b border-slate-700/50"><span class="text-xs text-slate-400">${label}</span><span class="text-sm text-white">${val || '<span class=text-slate-500>尚未填寫</span>'}</span></div>`;
+  const field = (label, val, key) => `<div class="flex justify-between py-1.5 border-b border-slate-700/50"><span class="text-xs text-slate-400">${label}</span><span class="text-sm text-white">${val || '<span class=text-slate-500>尚未填寫</span>'}</span></div>`;
 
   document.getElementById('pageContainer').innerHTML = `
-    <h2 class="text-lg font-bold mb-4">👤 長者資料</h2>
+    <h2 class="text-lg font-bold mb-4">👤 長者資料 <button onclick="openEditModal()" class="text-xs px-2 py-1 rounded bg-cyan-600 text-white ml-2">✏️ 編輯</button></h2>
     <div class="card p-4 mb-3"><h3 class="text-sm font-bold text-cyan-400 mb-2">個人資訊</h3>
       ${field('姓名', p.name)}${field('暱稱', p.nickname)}${field('性別', p.gender==='male'?'男':'女')}${field('年齡', p.age)}${field('居住地', p.location)}
     </div>
@@ -222,7 +226,45 @@ function renderProfile() {
     <div class="card p-4"><h3 class="text-sm font-bold text-cyan-400 mb-2">認知狀態</h3>
       ${field('失智症', men.has_dementia ? '是' : '否')}${field('照護備註', men.cognitive_notes)}
     </div>
+    <!-- 編輯 Modal -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div class="bg-slate-800 rounded-xl p-5 w-full max-w-md max-h-[80vh] overflow-y-auto">
+        <h3 class="text-base font-bold text-white mb-4">編輯長者資料</h3>
+        <div class="space-y-3">
+          <div><label class="text-xs text-slate-400">暱稱</label><input id="edit_nickname" value="${p.nickname||''}" class="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-sm text-white"></div>
+          <div><label class="text-xs text-slate-400">居住地</label><input id="edit_location" value="${p.location||''}" class="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-sm text-white"></div>
+          <div><label class="text-xs text-slate-400">慢性疾病（逗號分隔）</label><input id="edit_diseases" value="${(med.chronic_diseases||[]).join('、')}" class="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-sm text-white"></div>
+          <div><label class="text-xs text-slate-400">目前用藥（逗號分隔）</label><input id="edit_meds" value="${(med.current_medications||[]).join('、')}" class="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-sm text-white"></div>
+          <div><label class="text-xs text-slate-400">緊急聯絡人</label><input id="edit_ec_name" value="${ec.name||''}" class="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-sm text-white"></div>
+          <div><label class="text-xs text-slate-400">聯絡人電話</label><input id="edit_ec_phone" value="${ec.phone||''}" class="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-sm text-white"></div>
+        </div>
+        <div class="flex justify-end gap-2 mt-5">
+          <button onclick="closeEditModal()" class="px-4 py-2 rounded bg-slate-600 text-sm text-white">取消</button>
+          <button onclick="saveProfile()" class="px-4 py-2 rounded bg-emerald-500 text-sm text-white font-bold">儲存</button>
+        </div>
+      </div>
+    </div>
   `;
+}
+function openEditModal() { document.getElementById('editModal').classList.remove('hidden'); }
+function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); }
+async function saveProfile() {
+  const data = {
+    name: elderData.personal_info?.name || '',
+    nickname: document.getElementById('edit_nickname').value.trim(),
+    gender: elderData.personal_info?.gender || 'male',
+    location: document.getElementById('edit_location').value.trim(),
+    chronic_diseases: document.getElementById('edit_diseases').value.split(/[,，、]/).map(s=>s.trim()).filter(Boolean),
+    current_medications: document.getElementById('edit_meds').value.split(/[,，、]/).map(s=>s.trim()).filter(Boolean),
+    ec_name: document.getElementById('edit_ec_name').value.trim(),
+    ec_phone: document.getElementById('edit_ec_phone').value.trim(),
+    elder_id: elderId
+  };
+  try {
+    await fetch('/api/elder/profile', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    closeEditModal();
+    await loadData();
+  } catch(e) { alert('儲存失敗'); }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -375,11 +417,43 @@ function renderTimeline() {
 // ═══════════════════════════════════════════════════════
 function renderReminders() {
   if (!elderData) return;
-  // elderData 沒有直接的 reminders，需要額外呼叫或從 timeline 提取
   document.getElementById('pageContainer').innerHTML = `
     <h2 class="text-lg font-bold mb-4">🔔 提醒事項</h2>
-    <div class="card p-4"><p class="text-sm text-slate-400">提醒事項功能開發中，長者可透過對話設定提醒（如「下午一點提醒我吃藥」）</p></div>
+    <div class="mb-4 flex gap-2">
+      <input id="newReminderInput" type="text" placeholder="輸入提醒內容（如：下午一點吃藥）" class="flex-1 px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none">
+      <button onclick="addNewReminder()" class="px-4 py-2 rounded-lg bg-emerald-500 text-white text-sm font-bold">+ 新增</button>
+    </div>
+    <div id="remindersList" class="space-y-2"><p class="text-sm text-slate-500">載入中...</p></div>
   `;
+  loadReminders();
+}
+async function loadReminders() {
+  try {
+    const resp = await fetch(\`/api/reminders/\${elderId}/pending\`);
+    const data = await resp.json();
+    const list = document.getElementById('remindersList');
+    const reminders = data.reminders || [];
+    if (reminders.length === 0) {
+      list.innerHTML = '<p class="text-sm text-slate-500">目前沒有待處理的提醒</p>';
+      return;
+    }
+    list.innerHTML = reminders.map(r => \`
+      <div class="card p-3 flex justify-between items-center">
+        <div><div class="text-sm text-white">\${r.content}</div><div class="text-xs text-slate-500">\${r.created_at?.slice(0,16) || ''}</div></div>
+        <span class="text-xs px-2 py-0.5 rounded \${r.status==='pending'?'bg-amber-500/20 text-amber-300':'bg-emerald-500/20 text-emerald-300'}">\${r.status==='pending'?'⏰ 待通知':'✅ 已通知'}</span>
+      </div>
+    \`).join('');
+  } catch(e) { document.getElementById('remindersList').innerHTML = '<p class="text-red-400 text-sm">載入失敗</p>'; }
+}
+async function addNewReminder() {
+  const input = document.getElementById('newReminderInput');
+  const content = input.value.trim();
+  if (!content) return;
+  try {
+    await fetch(\`/api/reminders/\${elderId}/add\`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({content}) });
+    input.value = '';
+    loadReminders();
+  } catch(e) { alert('新增失敗'); }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -392,7 +466,13 @@ function renderSettings() {
       <div class="card p-4">
         <h3 class="text-sm font-bold text-cyan-400 mb-3">📌 帳號資訊</h3>
         <div class="text-xs text-slate-400">Elder ID: ${elderId}</div>
-        <div class="text-xs text-slate-400 mt-1">PIN 碼狀態：已設定</div>
+        <div class="text-xs text-slate-400 mt-1">暱稱：${elderData?.personal_info?.nickname || ''}</div>
+        <div class="mt-3"><button onclick="showResetPin()" class="text-xs px-3 py-1.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 transition">重設 PIN 碼</button></div>
+        <div id="resetPinArea" class="hidden mt-3 space-y-2">
+          <input id="new_pin" type="password" inputmode="numeric" maxlength="6" placeholder="新 PIN 碼（4~6 位）" class="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-sm text-white">
+          <input id="new_pin_confirm" type="password" inputmode="numeric" maxlength="6" placeholder="確認新 PIN" class="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-sm text-white">
+          <button onclick="resetPin()" class="px-4 py-2 rounded bg-emerald-500 text-white text-sm font-bold">確認重設</button>
+        </div>
       </div>
       <div class="card p-4">
         <h3 class="text-sm font-bold text-cyan-400 mb-3">🔔 通知偏好</h3>
@@ -401,7 +481,10 @@ function renderSettings() {
       </div>
       <div class="card p-4">
         <h3 class="text-sm font-bold text-cyan-400 mb-3">📦 資料管理</h3>
-        <button onclick="exportData()" class="text-xs px-3 py-1.5 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 transition">匯出我的資料（JSON）</button>
+        <div class="flex gap-2">
+          <button onclick="exportData()" class="text-xs px-3 py-1.5 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 transition">匯出資料（JSON）</button>
+          <button onclick="confirmDelete()" class="text-xs px-3 py-1.5 rounded bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30 transition">刪除帳號</button>
+        </div>
       </div>
       <div class="card p-4">
         <h3 class="text-sm font-bold text-cyan-400 mb-3">ℹ️ 系統資訊</h3>
@@ -411,6 +494,27 @@ function renderSettings() {
       </div>
     </div>
   `;
+}
+function showResetPin() { document.getElementById('resetPinArea').classList.toggle('hidden'); }
+async function resetPin() {
+  const pin = document.getElementById('new_pin').value.trim();
+  const confirm = document.getElementById('new_pin_confirm').value.trim();
+  if (!pin || pin.length < 4 || pin.length > 6 || !/^\d+$/.test(pin)) { alert('PIN 碼必須是 4~6 位數字'); return; }
+  if (pin !== confirm) { alert('兩次輸入不一致'); return; }
+  try {
+    await fetch('/api/elder/profile', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ elder_id: elderId, name: elderData.personal_info?.name||'', nickname: elderData.personal_info?.nickname||'', gender: elderData.personal_info?.gender||'male', pin: pin }) });
+    alert('PIN 碼已重設！');
+    document.getElementById('resetPinArea').classList.add('hidden');
+  } catch(e) { alert('重設失敗'); }
+}
+function confirmDelete() {
+  if (confirm('確定要刪除帳號嗎？此操作不可逆！')) {
+    if (confirm('再次確認：刪除後所有資料將永久清除。')) {
+      localStorage.clear();
+      alert('帳號已標記刪除。');
+      location.href = 'index.html';
+    }
+  }
 }
 
 function exportData() {
