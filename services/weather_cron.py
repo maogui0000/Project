@@ -1,4 +1,5 @@
 import time
+import json
 from datetime import datetime
 import requests
 import urllib3
@@ -388,7 +389,7 @@ def _send_line_push(text: str) -> bool:
             "messages": [{"type": "text", "text": text}]
         }
         
-        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        response = requests.post(url, headers=headers, data=json.dumps(payload, ensure_ascii=False).encode('utf-8'), timeout=10)
         
         if response.status_code == 200:
             return True
